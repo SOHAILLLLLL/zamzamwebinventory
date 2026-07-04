@@ -1,0 +1,56 @@
+.root {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgba(20, 20, 24, 0.55);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s ease;
+}
+
+.trigger:hover {
+  background: rgba(20, 20, 24, 0.75);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  overflow: hidden;
+}
+
+.deleteItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.deleteItem:hover {
+  background: var(--danger-bg);
+}

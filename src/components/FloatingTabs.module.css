@@ -1,0 +1,37 @@
+.island {
+  position: sticky;
+  top: 78px;
+  z-index: 20;
+  display: inline-flex;
+  align-self: center;
+  gap: 2px;
+  padding: 4px;
+  margin: 4px auto 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.active {
+  background: var(--accent);
+  color: #fff;
+}

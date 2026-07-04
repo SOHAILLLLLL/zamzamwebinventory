@@ -1,0 +1,135 @@
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #f0f0f3;
+  --border: #e3e3e8;
+  --text: #17181c;
+  --text-muted: #66666f;
+  --text-faint: #93939c;
+
+  --accent: #ea580c;
+  --accent-hover: #c2410c;
+  --accent-bg: rgba(234, 88, 12, 0.1);
+  --accent-border: rgba(234, 88, 12, 0.35);
+
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.1);
+  --success: #16a34a;
+  --success-bg: rgba(22, 163, 74, 0.1);
+  --warning: #d97706;
+  --warning-bg: rgba(217, 119, 6, 0.12);
+  --info: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.1);
+
+  --shadow-sm: 0 1px 2px rgba(15, 15, 20, 0.06);
+  --shadow-md: 0 6px 16px -4px rgba(15, 15, 20, 0.12), 0 2px 6px -2px rgba(15, 15, 20, 0.08);
+  --shadow-lg: 0 20px 40px -12px rgba(15, 15, 20, 0.28);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --sans: 'Segoe UI', system-ui, Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, Consolas, 'SFMono-Regular', monospace;
+
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1012;
+    --surface: #191a1e;
+    --surface-2: #212227;
+    --border: #2c2d33;
+    --text: #f2f2f4;
+    --text-muted: #9c9ca6;
+    --text-faint: #6c6c75;
+
+    --accent: #fb923c;
+    --accent-hover: #fdba74;
+    --accent-bg: rgba(251, 146, 60, 0.14);
+    --accent-border: rgba(251, 146, 60, 0.4);
+
+    --danger: #f87171;
+    --danger-bg: rgba(248, 113, 113, 0.14);
+    --success: #4ade80;
+    --success-bg: rgba(74, 222, 128, 0.14);
+    --warning: #fbbf24;
+    --warning-bg: rgba(251, 191, 36, 0.14);
+    --info: #60a5fa;
+    --info-bg: rgba(96, 165, 250, 0.14);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.45), 0 2px 6px -2px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--text);
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--accent-bg);
+  color: var(--text);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
