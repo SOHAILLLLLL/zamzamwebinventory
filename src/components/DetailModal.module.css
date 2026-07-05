@@ -5,11 +5,35 @@
   margin-top: 14px;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.shareButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shareButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .deleteButton {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
   padding: 7px 12px;
   border: 1px solid var(--danger);
   border-radius: var(--radius-sm);
@@ -17,4 +41,10 @@
   color: var(--danger);
   font-size: 12px;
   font-weight: 600;
+}
+
+.shareErrorText {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--danger);
 }

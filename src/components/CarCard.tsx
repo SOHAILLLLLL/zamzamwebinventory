@@ -1,5 +1,5 @@
 import { Tag } from 'lucide-react'
-import { getPhotoUrl } from '../lib/photos'
+import { buildCarPdf, sharePdf } from '../lib/pdf'
 import type { DonorVehicleListItem } from '../types/db'
 import { Badge, formatStatus, statusTone } from './Badge'
 import { CardMenu } from './CardMenu'
@@ -13,16 +13,20 @@ interface CarCardProps {
 }
 
 export function CarCard({ vehicle, onOpen, onDelete }: CarCardProps) {
-  const thumbnail = vehicle.photos[0] ? getPhotoUrl('car-photos', vehicle.photos[0]) : null
   const app = vehicle.vehicle_application
   const title = [app?.make, app?.model].filter(Boolean).join(' ') || 'Unidentified vehicle'
   const subtitle = [app?.generation_code, app?.variant].filter(Boolean).join(' · ')
 
+  async function handleSharePdf() {
+    const blob = await buildCarPdf(vehicle)
+    await sharePdf(blob, `${vehicle.tag_code}.pdf`, title)
+  }
+
   return (
     <article className={styles.card} onClick={onOpen} tabIndex={0} role="button">
       <div className={styles.thumb}>
-        <LazyImage src={thumbnail} alt={title} />
-        <CardMenu onDelete={onDelete} />
+        <LazyImage bucket="car-photos" path={vehicle.photos[0] ?? null} alt={title} />
+        <CardMenu onDelete={onDelete} onSharePdf={handleSharePdf} />
         <div className={styles.statusOverlay}>
           <Badge tone={statusTone(vehicle.status)}>{formatStatus(vehicle.status)}</Badge>
         </div>

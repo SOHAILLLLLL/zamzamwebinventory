@@ -16,7 +16,9 @@ export function Navbar() {
   return (
     <header className={styles.header}>
       <div className={styles.bar}>
-        <span className={styles.brand}>ZamZam Auto Parts</span>
+        <span className={styles.brand}>
+          <img src="/zamzam.png" alt="ZamZam Auto Parts" className={styles.logo} />
+        </span>
 
         <nav className={styles.desktopNav}>
           {links.map(({ to, label, icon: Icon, end }) => (

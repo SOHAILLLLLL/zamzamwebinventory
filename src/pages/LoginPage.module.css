@@ -18,24 +18,16 @@
   box-shadow: var(--shadow-md);
 }
 
-.iconWrap {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-pill);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent-bg);
-  color: var(--accent);
-  margin-bottom: 14px;
-}
-
-.title {
-  font-size: 18px;
-  margin-bottom: 4px;
+.logo {
+  height: 64px;
+  width: auto;
+  align-self: center;
+  object-fit: contain;
+  margin-bottom: 10px;
 }
 
 .subtitle {
+  text-align: center;
   color: var(--text-muted);
   font-size: 13px;
   margin-bottom: 22px;

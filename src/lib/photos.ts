@@ -2,10 +2,18 @@ import { supabase } from './supabase'
 
 export type PhotoBucket = 'car-photos' | 'part-photos'
 
-export function getPhotoUrl(bucket: PhotoBucket, path: string): string {
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
+// Buckets are private — always resolve through the authenticated session, never getPublicUrl.
+const SIGNED_URL_TTL_SECONDS = 60 * 60
+
+export async function getSignedPhotoUrl(bucket: PhotoBucket, path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+  if (error || !data) return null
+  return data.signedUrl
 }
 
-export function getPhotoUrls(bucket: PhotoBucket, paths: string[]): string[] {
-  return paths.map((path) => getPhotoUrl(bucket, path))
+export async function getSignedPhotoUrls(bucket: PhotoBucket, paths: string[]): Promise<(string | null)[]> {
+  if (paths.length === 0) return []
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(paths, SIGNED_URL_TTL_SECONDS)
+  if (error || !data) return paths.map(() => null)
+  return data.map((entry) => entry.signedUrl ?? null)
 }

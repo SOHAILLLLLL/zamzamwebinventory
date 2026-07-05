@@ -1,19 +1,21 @@
 import { useState } from 'react'
+import type { PhotoBucket } from '../lib/photos'
 import { LazyImage } from './LazyImage'
 import styles from './PhotoGallery.module.css'
 
 interface PhotoGalleryProps {
-  urls: string[]
+  bucket: PhotoBucket
+  paths: string[]
   alt: string
 }
 
-export function PhotoGallery({ urls, alt }: PhotoGalleryProps) {
+export function PhotoGallery({ bucket, paths, alt }: PhotoGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
 
-  if (urls.length === 0) {
+  if (paths.length === 0) {
     return (
       <div className={styles.emptyMain}>
-        <LazyImage src={null} alt={alt} />
+        <LazyImage bucket={bucket} path={null} alt={alt} />
       </div>
     )
   }
@@ -21,19 +23,19 @@ export function PhotoGallery({ urls, alt }: PhotoGalleryProps) {
   return (
     <div className={styles.gallery}>
       <div className={styles.main}>
-        <LazyImage src={urls[activeIndex]} alt={`${alt} photo ${activeIndex + 1}`} />
+        <LazyImage bucket={bucket} path={paths[activeIndex]} alt={`${alt} photo ${activeIndex + 1}`} />
       </div>
-      {urls.length > 1 && (
+      {paths.length > 1 && (
         <div className={styles.strip}>
-          {urls.map((url, index) => (
+          {paths.map((path, index) => (
             <button
-              key={url}
+              key={path}
               type="button"
               className={`${styles.thumbButton} ${index === activeIndex ? styles.thumbActive : ''}`}
               onClick={() => setActiveIndex(index)}
               aria-label={`View photo ${index + 1}`}
             >
-              <LazyImage src={url} alt="" />
+              <LazyImage bucket={bucket} path={path} alt="" />
             </button>
           ))}
         </div>

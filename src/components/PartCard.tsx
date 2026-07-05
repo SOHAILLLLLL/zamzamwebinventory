@@ -1,5 +1,5 @@
 import { CheckCircle2, Hash, MapPin, XCircle } from 'lucide-react'
-import { getPhotoUrl } from '../lib/photos'
+import { buildPartPdf, sharePdf } from '../lib/pdf'
 import type { InventoryListItem } from '../types/db'
 import { Badge, formatStatus, statusTone } from './Badge'
 import { CardMenu } from './CardMenu'
@@ -13,16 +13,20 @@ interface PartCardProps {
 }
 
 export function PartCard({ item, onOpen, onDelete }: PartCardProps) {
-  const thumbnail = item.photos[0] ? getPhotoUrl('part-photos', item.photos[0]) : null
   const vehicle = item.donor_vehicle?.vehicle_application
   const vehicleLine = [vehicle?.make, vehicle?.generation_code].filter(Boolean).join(' · ')
   const partNumber = item.part_catalog?.primary_oem_number || item.sku
 
+  async function handleSharePdf() {
+    const blob = await buildPartPdf(item)
+    await sharePdf(blob, `${item.sku}.pdf`, item.item_name)
+  }
+
   return (
     <article className={styles.card} onClick={onOpen} tabIndex={0} role="button">
       <div className={styles.thumb}>
-        <LazyImage src={thumbnail} alt={item.item_name} />
-        <CardMenu onDelete={onDelete} />
+        <LazyImage bucket="part-photos" path={item.photos[0] ?? null} alt={item.item_name} />
+        <CardMenu onDelete={onDelete} onSharePdf={handleSharePdf} />
         <div className={styles.statusOverlay}>
           <Badge tone={statusTone(item.status)}>{formatStatus(item.status)}</Badge>
         </div>

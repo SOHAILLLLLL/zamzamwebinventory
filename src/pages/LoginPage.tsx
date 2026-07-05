@@ -1,4 +1,3 @@
-import { Lock } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import styles from './LoginPage.module.css'
@@ -22,10 +21,7 @@ export function LoginPage() {
   return (
     <div className={styles.wrap}>
       <form className={styles.card} onSubmit={handleSubmit}>
-        <div className={styles.iconWrap}>
-          <Lock size={20} strokeWidth={2} />
-        </div>
-        <h1 className={styles.title}>ZamZam Auto Parts</h1>
+        <img src="/zamzam.png" alt="ZamZam Auto Parts" className={styles.logo} />
         <p className={styles.subtitle}>Sign in with your staff account to continue.</p>
 
         <label className={styles.label} htmlFor="email">

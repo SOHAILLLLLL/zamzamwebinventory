@@ -3,11 +3,13 @@ import { CarCard } from '../components/CarCard'
 import { CarDetailModal } from '../components/CarDetailModal'
 import { ChunkedGrid } from '../components/ChunkedGrid'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { FilterDropdown } from '../components/FilterDropdown'
 import { FloatingTabs, type InventoryTab } from '../components/FloatingTabs'
 import { PartCard } from '../components/PartCard'
 import { PartDetailModal } from '../components/PartDetailModal'
 import { SearchBar } from '../components/SearchBar'
 import { SortMenu } from '../components/SortMenu'
+import { StatusFilterChips } from '../components/StatusFilterChips'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useDeleteDonorVehicle } from '../hooks/useDeleteDonorVehicle'
 import { DeleteBlockedError, useDeleteInventoryItem } from '../hooks/useDeleteInventoryItem'
@@ -17,7 +19,7 @@ import type { DonorVehicleListItem, InventoryListItem } from '../types/db'
 import styles from './InventoryPage.module.css'
 
 type PartSort = 'newest' | 'vehicle' | 'part_name'
-type CarSort = 'newest' | 'vehicle'
+type CarSort = 'newest' | 'vehicle' | 'dismantling'
 
 const partSortOptions: { value: PartSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
@@ -28,6 +30,7 @@ const partSortOptions: { value: PartSort; label: string }[] = [
 const carSortOptions: { value: CarSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
   { value: 'vehicle', label: 'Sort by vehicle' },
+  { value: 'dismantling', label: 'Dismantling cars' },
 ]
 
 function matchesPartSearch(item: InventoryListItem, query: string) {
@@ -73,16 +76,31 @@ export function InventoryPage() {
   const [selectedCar, setSelectedCar] = useState<DonorVehicleListItem | null>(null)
   const [deletePartTarget, setDeletePartTarget] = useState<InventoryListItem | null>(null)
   const [deleteCarTarget, setDeleteCarTarget] = useState<DonorVehicleListItem | null>(null)
+  const [partNameFilter, setPartNameFilter] = useState<string | null>(null)
+  const [carStatusFilter, setCarStatusFilter] = useState<string | null>(null)
 
   const partsQuery = useInventoryItems()
   const carsQuery = useDonorVehicles()
   const deleteInventoryItem = useDeleteInventoryItem()
   const deleteDonorVehicle = useDeleteDonorVehicle()
 
+  const partNameOptions = useMemo(() => {
+    const names = new Set((partsQuery.data ?? []).map((item) => item.item_name))
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [partsQuery.data])
+
+  const carStatusOptions = useMemo(() => {
+    const statuses = new Set((carsQuery.data ?? []).map((vehicle) => vehicle.status))
+    return [...statuses].sort((a, b) => a.localeCompare(b))
+  }, [carsQuery.data])
+
   const filteredSortedParts = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase()
     const items = partsQuery.data ?? []
-    const filtered = query ? items.filter((item) => matchesPartSearch(item, query)) : items
+    let filtered = query ? items.filter((item) => matchesPartSearch(item, query)) : items
+    if (partNameFilter) {
+      filtered = filtered.filter((item) => item.item_name === partNameFilter)
+    }
     const sorted = [...filtered]
 
     if (partSort === 'part_name') {
@@ -96,24 +114,30 @@ export function InventoryPage() {
     }
 
     return sorted
-  }, [partsQuery.data, debouncedSearch, partSort])
+  }, [partsQuery.data, debouncedSearch, partSort, partNameFilter])
 
   const filteredSortedCars = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase()
     const items = carsQuery.data ?? []
-    const filtered = query ? items.filter((vehicle) => matchesCarSearch(vehicle, query)) : items
+    let filtered = query ? items.filter((vehicle) => matchesCarSearch(vehicle, query)) : items
+    if (carStatusFilter) {
+      filtered = filtered.filter((vehicle) => vehicle.status === carStatusFilter)
+    }
+    if (carSort === 'dismantling') {
+      filtered = filtered.filter((vehicle) => vehicle.status.toLowerCase() === 'dismantling')
+    }
     const sorted = [...filtered]
 
-    if (carSort === 'vehicle') {
+    if (carSort === 'vehicle' || carSort === 'dismantling') {
       sorted.sort((a, b) => {
-        const aLabel = `${a.vehicle_application?.make ?? ''} ${a.vehicle_application?.model ?? ''}`
-        const bLabel = `${b.vehicle_application?.make ?? ''} ${b.vehicle_application?.model ?? ''}`
+        const aLabel = `${a.vehicle_application?.make ?? ''} ${a.vehicle_application?.model ?? ''} ${a.vehicle_application?.generation_code ?? ''}`
+        const bLabel = `${b.vehicle_application?.make ?? ''} ${b.vehicle_application?.model ?? ''} ${b.vehicle_application?.generation_code ?? ''}`
         return aLabel.localeCompare(bLabel)
       })
     }
 
     return sorted
-  }, [carsQuery.data, debouncedSearch, carSort])
+  }, [carsQuery.data, debouncedSearch, carSort, carStatusFilter])
 
   async function confirmDeletePart() {
     if (!deletePartTarget) return
@@ -140,11 +164,24 @@ export function InventoryPage() {
           placeholder={tab === 'parts' ? 'Search parts, SKU, vehicle…' : 'Search cars, tag code, VIN…'}
         />
         {tab === 'parts' ? (
-          <SortMenu value={partSort} onChange={setPartSort} options={partSortOptions} />
+          <>
+            <FilterDropdown
+              label="Part catalogue"
+              allLabel="All parts"
+              options={partNameOptions}
+              value={partNameFilter}
+              onChange={setPartNameFilter}
+            />
+            <SortMenu value={partSort} onChange={setPartSort} options={partSortOptions} />
+          </>
         ) : (
           <SortMenu value={carSort} onChange={setCarSort} options={carSortOptions} />
         )}
       </div>
+
+      {tab === 'cars' && (
+        <StatusFilterChips statuses={carStatusOptions} value={carStatusFilter} onChange={setCarStatusFilter} />
+      )}
 
       {tab === 'parts' && (
         <>
@@ -154,7 +191,7 @@ export function InventoryPage() {
             <ChunkedGrid
               items={filteredSortedParts}
               keyFor={(item) => item.id}
-              resetKey={`${debouncedSearch}-${partSort}`}
+              resetKey={`${debouncedSearch}-${partSort}-${partNameFilter}`}
               emptyMessage={debouncedSearch ? 'No parts match your search.' : 'No inventory items yet.'}
               renderItem={(item) => (
                 <PartCard
@@ -176,8 +213,10 @@ export function InventoryPage() {
             <ChunkedGrid
               items={filteredSortedCars}
               keyFor={(vehicle) => vehicle.id}
-              resetKey={`${debouncedSearch}-${carSort}`}
-              emptyMessage={debouncedSearch ? 'No vehicles match your search.' : 'No vehicles in fleet yet.'}
+              resetKey={`${debouncedSearch}-${carSort}-${carStatusFilter}`}
+              emptyMessage={
+                debouncedSearch || carStatusFilter ? 'No vehicles match your filters.' : 'No vehicles in fleet yet.'
+              }
               renderItem={(vehicle) => (
                 <CarCard
                   vehicle={vehicle}

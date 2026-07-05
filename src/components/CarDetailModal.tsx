@@ -1,5 +1,6 @@
-import { Trash2 } from 'lucide-react'
-import { getPhotoUrls } from '../lib/photos'
+import { Share2, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { buildCarPdf, sharePdf } from '../lib/pdf'
 import type { DonorVehicleListItem } from '../types/db'
 import { Badge, formatStatus, statusTone } from './Badge'
 import { DetailRow, DetailSection } from './DetailRow'
@@ -16,21 +17,42 @@ interface CarDetailModalProps {
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
 export function CarDetailModal({ vehicle, onClose, onDelete }: CarDetailModalProps) {
-  const photoUrls = getPhotoUrls('car-photos', vehicle.photos)
   const app = vehicle.vehicle_application
   const title = [app?.make, app?.model].filter(Boolean).join(' ') || vehicle.tag_code
+  const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState(false)
+
+  async function handleSharePdf() {
+    setSharing(true)
+    setShareError(false)
+    try {
+      const blob = await buildCarPdf(vehicle)
+      await sharePdf(blob, `${vehicle.tag_code}.pdf`, title)
+    } catch {
+      setShareError(true)
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <Modal title={title} onClose={onClose}>
-      <PhotoGallery urls={photoUrls} alt={title} />
+      <PhotoGallery bucket="car-photos" paths={vehicle.photos} alt={title} />
 
       <div className={styles.topRow}>
         <Badge tone={statusTone(vehicle.status)}>{formatStatus(vehicle.status)}</Badge>
-        <button type="button" className={styles.deleteButton} onClick={onDelete}>
-          <Trash2 size={14} />
-          Delete
-        </button>
+        <div className={styles.actions}>
+          <button type="button" className={styles.shareButton} onClick={handleSharePdf} disabled={sharing}>
+            <Share2 size={14} />
+            {sharing ? 'Preparing…' : 'Share PDF'}
+          </button>
+          <button type="button" className={styles.deleteButton} onClick={onDelete}>
+            <Trash2 size={14} />
+            Delete
+          </button>
+        </div>
       </div>
+      {shareError && <p className={styles.shareErrorText}>Couldn't generate PDF. Try again.</p>}
 
       <DetailSection title="Vehicle">
         <DetailRow label="Tag code" value={vehicle.tag_code} />

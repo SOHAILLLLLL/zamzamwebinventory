@@ -1,13 +1,16 @@
-import { MoreVertical, Trash2 } from 'lucide-react'
+import { MoreVertical, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import styles from './CardMenu.module.css'
 
 interface CardMenuProps {
   onDelete: () => void
+  onSharePdf: () => Promise<void>
 }
 
-export function CardMenu({ onDelete }: CardMenuProps) {
+export function CardMenu({ onDelete, onSharePdf }: CardMenuProps) {
   const [open, setOpen] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shareError, setShareError] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -22,6 +25,19 @@ export function CardMenu({ onDelete }: CardMenuProps) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
+
+  async function handleShare() {
+    setSharing(true)
+    setShareError(false)
+    try {
+      await onSharePdf()
+      setOpen(false)
+    } catch {
+      setShareError(true)
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <div
@@ -41,6 +57,17 @@ export function CardMenu({ onDelete }: CardMenuProps) {
       </button>
       {open && (
         <div className={styles.menu} role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            disabled={sharing}
+            onClick={handleShare}
+          >
+            <Share2 size={14} />
+            {sharing ? 'Preparing…' : 'Share PDF'}
+          </button>
+          {shareError && <p className={styles.menuError}>Couldn't generate PDF</p>}
           <button
             type="button"
             role="menuitem"
