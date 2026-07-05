@@ -65,3 +65,7 @@ Next.js web app sharing the **same Supabase Postgres database** as the ZamZam Re
 - `src/` — application source (entry: `src/main.tsx`, root component: `src/App.tsx`)
 - `public/` — static assets served as-is
 - `index.html` — Vite entry HTML
+
+## Design Context
+
+See [`PRODUCT.md`](PRODUCT.md) (and `DESIGN.md`, once generated) for the full brief. Short version: this is a **product**-register, staff-only internal tool (not marketing) for ZamZam's yard/counter and office staff, sharing a Supabase DB with the ZamZam mobile app. Priorities: fast lookup, guarded destructive actions, trustworthy customer-facing sharing (PDF/photos), works equally well in-hand and at a desk. Explicitly avoid the generic SaaS-dashboard look.

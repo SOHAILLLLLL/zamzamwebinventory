@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-06T00:00:00.000Z",
+  "title": "Design System: ZamZam Auto Parts — Web Inventory",
+  "extensions": {
+    "colorMeta": {
+      "ledger-navy": {
+        "role": "primary",
+        "displayName": "Ledger Navy",
+        "canonical": "#1d3a5f",
+        "tonalRamp": ["#0a1520", "#122236", "#1a304c", "#1d3a5f", "#2f5480", "#4a72a0", "#7ea3c8", "#c3d8ea"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#17181c",
+        "tonalRamp": ["#0a0a0c", "#17181c", "#2c2d33", "#46474e", "#66666f", "#93939c", "#c7c7cd", "#f6f6f8"]
+      }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Modal and page titles only — the largest text in the app, capped at 18px." },
+      "title": { "displayName": "Title", "purpose": "Card titles and detail-view section headings." },
+      "body": { "displayName": "Body", "purpose": "Running text, inputs, base document size." },
+      "label": { "displayName": "Label", "purpose": "Badges, meta rows, filter chips, vehicle-line eyebrows." }
+    },
+    "shadows": [
+      { "name": "sm", "value": "0 1px 2px rgba(15,15,20,0.06)", "purpose": "Barely-there separation for small floating controls (card 3-dot menu trigger)." },
+      { "name": "md", "value": "0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08)", "purpose": "Hover-lifted cards, open menus/dropdowns, the floating tab island." },
+      { "name": "lg", "value": "0 20px 40px -12px rgba(15,15,20,0.28)", "purpose": "Modals only." }
+    ],
+    "motion": [
+      { "name": "ease-card-hover", "value": "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease", "purpose": "Card lift on hover/focus." },
+      { "name": "ease-tab", "value": "background 0.18s ease, color 0.18s ease", "purpose": "Segmented-control tab and menu-item state changes." }
+    ],
+    "breakpoints": [
+      { "name": "grid-2up", "value": "560px", "purpose": "Below this, card grids stay 2-per-row; above it, auto-fill takes over." },
+      { "name": "modal-dialog", "value": "720px", "purpose": "Below this, detail modals are bottom sheets; above it, centered dialogs." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Sign in / primary confirm actions.",
+      "html": "<button class=\"ds-btn-primary\">Sign in</button>",
+      "css": ".ds-btn-primary { background: #1d3a5f; color: #fff; padding: 11px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: background 0.15s ease; } .ds-btn-primary:hover { background: #14293f; } .ds-btn-primary:focus-visible { outline: 2px solid #1d3a5f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Delete action inside detail modals and confirm dialogs.",
+      "html": "<button class=\"ds-btn-danger\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6\"/></svg> Delete</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; gap: 6px; background: rgba(220,38,38,0.1); color: #dc2626; border: 1px solid #dc2626; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }"
+    },
+    {
+      "name": "Part Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Compact inventory item card with thumbnail, status badge, and meta row.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-thumb\"></div><div class=\"ds-card-body\"><p class=\"ds-card-eyebrow\">Maruti Suzuki · K12</p><h3 class=\"ds-card-title\">Front Right Headlamp</h3><span class=\"ds-card-meta\">#OEM-4471</span></div></article>",
+      "css": ".ds-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #e3e3e8; border-radius: 14px; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08); border-color: rgba(29,58,95,0.35); } .ds-card-thumb { aspect-ratio: 4/3; background: #f0f0f3; } .ds-card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; } .ds-card-eyebrow { font-size: 12px; font-weight: 600; color: #1d3a5f; text-transform: uppercase; letter-spacing: 0.02em; margin: 0; } .ds-card-title { font-size: 14px; font-weight: 600; margin: 0; } .ds-card-meta { font-size: 12px; color: #66666f; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Pill status/condition tag used on cards and detail views.",
+      "html": "<span class=\"ds-badge ds-badge-success\">Tested</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; } .ds-badge-success { color: #16a34a; background: rgba(22,163,74,0.1); }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Search bar with leading icon, used above every card grid.",
+      "html": "<div class=\"ds-search\"><svg class=\"ds-search-icon\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m21 21-4.3-4.3\"/></svg><input class=\"ds-search-input\" placeholder=\"Search parts, SKU, vehicle…\" /></div>",
+      "css": ".ds-search { position: relative; display: flex; align-items: center; } .ds-search-icon { position: absolute; left: 13px; color: #93939c; } .ds-search-input { width: 100%; padding: 10px 34px 10px 36px; border: 1px solid #e3e3e8; border-radius: 14px; background: #fff; font-size: 14px; } .ds-search-input:focus { outline: none; border-color: rgba(29,58,95,0.35); box-shadow: 0 0 0 3px rgba(29,58,95,0.1); }"
+    },
+    {
+      "name": "Segmented Tabs",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Floating Cars/Parts pill switch on the Inventory page.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Parts</button><button class=\"ds-tab\">Cars</button></div>",
+      "css": ".ds-tabs { display: inline-flex; gap: 2px; padding: 4px; background: #fff; border: 1px solid #e3e3e8; border-radius: 999px; box-shadow: 0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08); } .ds-tab { padding: 9px 20px; border: none; border-radius: 999px; background: transparent; color: #66666f; font-size: 14px; font-weight: 600; transition: background 0.18s ease, color 0.18s ease; } .ds-tab-active { background: #1d3a5f; color: #fff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Salvage Ledger",
+    "overview": "This is the tool a yard clerk trusts to be right, not the tool that tries to impress them. Every screen reads like a well-kept ledger for a working scrapyard: precise records of parts and donor vehicles, dense but never cluttered, calm enough to use standing at a counter and specific enough to trust at a desk. Personality is clean, modern, and trustworthy — restraint and clarity carry the design, not decoration. The system explicitly rejects the generic SaaS-dashboard look: no purple-gradient hero cards, no stock-icon card grids, no boilerplate admin-template chrome.",
+    "keyCharacteristics": [
+      "Flat surfaces at rest; depth appears only as feedback (hover, focus, overlay), never as ambient decoration.",
+      "One accent color, used sparingly, for anything interactive or 'the primary action.'",
+      "Dense information laid out with generous internal padding, not visual noise.",
+      "Identical component vocabulary whether the screen is used one-handed on a phone at the yard or with a mouse at a desk."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Ledger Navy is the only color used to mean 'interactive' or 'primary.' It never appears as pure decoration.", "section": "colors" },
+      { "name": "The No-Display-Size Rule", "body": "Nothing in this system exceeds 18px. Hierarchy comes from weight and color, not scale jumps.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "A card, input, or panel with no active interaction has no shadow — only a 1px hairline border.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Ledger Navy (#1d3a5f / dark #3a6ea5) as the only accent — buttons, active states, focus rings, links.",
+      "Do keep cards and inputs flat (border only) at rest; add shadow-md only on hover/open/active states.",
+      "Do pair every signal color (danger/success/warning/info) with its one fixed meaning — never repurpose one for decoration.",
+      "Do keep type hierarchy to weight and color, capping size at 18px since this is a dense utility tool.",
+      "Do make every interactive control work identically at phone-in-hand and desk-with-mouse sizes."
+    ],
+    "donts": [
+      "Don't reintroduce a generic SaaS-dashboard look: no purple/blue gradient hero cards, no stock-icon card grids.",
+      "Don't add a colored border-left/border-right stripe as a decorative accent on any card or list row.",
+      "Don't use background-clip: text gradient headings.",
+      "Don't let a card or button carry both a soft wide drop shadow and a full 1px border as static decoration.",
+      "Don't use border-radius above 20px on cards, panels, or inputs.",
+      "Don't repurpose Danger red, Success green, Warning amber, or Info blue as a general accent color."
+    ]
+  }
+}
