@@ -13,10 +13,15 @@
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
+  transition: transform 160ms var(--ease-out), color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
 .chip:hover {
   color: var(--text);
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chipActive {

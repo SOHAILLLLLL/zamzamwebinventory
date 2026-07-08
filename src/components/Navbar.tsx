@@ -17,7 +17,9 @@ export function Navbar() {
     <header className={styles.header}>
       <div className={styles.bar}>
         <span className={styles.brand}>
-          <img src="/zamzam.png" alt="ZamZam Auto Parts" className={styles.logo} />
+          <span className={styles.logoWrap}>
+            <img src="/zamzam.png" alt="ZamZam Auto Parts" className={styles.logo} />
+          </span>
         </span>
 
         <nav className={styles.desktopNav}>

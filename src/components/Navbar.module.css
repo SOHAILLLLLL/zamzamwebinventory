@@ -2,9 +2,9 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 92%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--panel-border);
 }
 
 .bar {
@@ -23,8 +23,16 @@
   white-space: nowrap;
 }
 
+.logoWrap {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}
+
 .logo {
-  height: 40px;
+  height: 32px;
   width: auto;
   object-fit: contain;
 }
@@ -44,19 +52,23 @@
   border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--panel-text-muted);
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 150ms ease, color 150ms ease;
 }
 
 .link:hover {
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--panel-bg-elevated);
+  color: var(--panel-text);
+}
+
+.link:active {
+  transform: scale(0.97);
 }
 
 .linkActive {
-  background: var(--accent-bg);
-  color: var(--accent);
+  background: rgba(45, 212, 201, 0.14);
+  color: var(--accent-on-panel);
 }
 
 .signOut {
@@ -65,17 +77,22 @@
   gap: 7px;
   margin-left: 6px;
   padding: 8px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-pill);
   background: transparent;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--panel-text-muted);
+  transition: background 150ms ease, color 150ms ease, transform 160ms var(--ease-out);
 }
 
 .signOut:hover {
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--panel-bg-elevated);
+  color: var(--panel-text);
+}
+
+.signOut:active {
+  transform: scale(0.97);
 }
 
 .menuButton {
@@ -84,11 +101,16 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
+  background: var(--panel-bg-elevated);
+  color: var(--panel-text);
   margin-left: auto;
+  transition: transform 160ms var(--ease-out);
+}
+
+.menuButton:active {
+  transform: scale(0.94);
 }
 
 .mobileNav {
@@ -96,7 +118,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 8px 12px 14px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--panel-border);
 }
 
 .mobileLink {
@@ -107,12 +129,18 @@
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--panel-text-muted);
   text-decoration: none;
+  transition: background 150ms ease, color 150ms ease;
 }
 
 .mobileLink:hover {
-  background: var(--surface-2);
+  background: var(--panel-bg-elevated);
+  color: var(--panel-text);
+}
+
+.mobileLink:active {
+  transform: scale(0.98);
 }
 
 @media (min-width: 720px) {

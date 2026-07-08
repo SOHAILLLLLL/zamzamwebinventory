@@ -7,8 +7,8 @@
   gap: 2px;
   padding: 4px;
   margin: 4px auto 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-md);
 }
@@ -21,17 +21,25 @@
   border: none;
   border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--panel-text-muted);
   font-size: 14px;
   font-weight: 600;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: background 180ms var(--ease-out), color 180ms var(--ease-out), transform 160ms var(--ease-out);
 }
 
 .tab:hover {
-  color: var(--text);
+  color: var(--panel-text);
+}
+
+.tab:active {
+  transform: scale(0.96);
 }
 
 .active {
   background: var(--accent);
+  color: #fff;
+}
+
+.active:hover {
   color: #fff;
 }

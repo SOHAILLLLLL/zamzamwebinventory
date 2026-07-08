@@ -4,11 +4,23 @@
   "title": "Design System: ZamZam Auto Parts — Web Inventory",
   "extensions": {
     "colorMeta": {
-      "ledger-navy": {
+      "ledger-teal": {
         "role": "primary",
-        "displayName": "Ledger Navy",
-        "canonical": "#1d3a5f",
-        "tonalRamp": ["#0a1520", "#122236", "#1a304c", "#1d3a5f", "#2f5480", "#4a72a0", "#7ea3c8", "#c3d8ea"]
+        "displayName": "Ledger Teal",
+        "canonical": "#0c7770",
+        "tonalRamp": ["#04211f", "#083c39", "#0b5852", "#0c7770", "#1a988f", "#3fb5ab", "#7cd1c6", "#c6ece6"]
+      },
+      "accent-on-panel": {
+        "role": "primary-on-dark",
+        "displayName": "Accent on Panel",
+        "canonical": "#2dd4c9",
+        "tonalRamp": ["#04211f", "#0b5852", "#14847a", "#1a988f", "#2dd4c9", "#5fe0d6", "#94ebe3", "#cdf7f3"]
+      },
+      "panel-charcoal": {
+        "role": "neutral-chrome",
+        "displayName": "Panel Charcoal",
+        "canonical": "#1c2128",
+        "tonalRamp": ["#08090b", "#1c2128", "#262c35", "#343b46", "#4a525f", "#6b7580", "#9aa0a8", "#d5d8db"]
       },
       "ink": {
         "role": "neutral",
@@ -25,12 +37,13 @@
     },
     "shadows": [
       { "name": "sm", "value": "0 1px 2px rgba(15,15,20,0.06)", "purpose": "Barely-there separation for small floating controls (card 3-dot menu trigger)." },
-      { "name": "md", "value": "0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08)", "purpose": "Hover-lifted cards, open menus/dropdowns, the floating tab island." },
+      { "name": "md", "value": "0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08)", "purpose": "Hover-lifted cards, open menus/dropdowns, and the floating tab island (permanent on the island)." },
       { "name": "lg", "value": "0 20px 40px -12px rgba(15,15,20,0.28)", "purpose": "Modals only." }
     ],
     "motion": [
-      { "name": "ease-card-hover", "value": "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease", "purpose": "Card lift on hover/focus." },
-      { "name": "ease-tab", "value": "background 0.18s ease, color 0.18s ease", "purpose": "Segmented-control tab and menu-item state changes." }
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Press-feedback scale-downs on buttons, chips, tabs, and cards." },
+      { "name": "ease-card-hover", "value": "transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease", "purpose": "Card lift on hover/focus (hover/color change -> plain ease per Emil Kowalski's framework)." },
+      { "name": "ease-tab", "value": "background 180ms var(--ease-out), color 180ms var(--ease-out), transform 160ms var(--ease-out)", "purpose": "Segmented-control tab and nav-link state changes." }
     ],
     "breakpoints": [
       { "name": "grid-2up", "value": "560px", "purpose": "Below this, card grids stay 2-per-row; above it, auto-fill takes over." },
@@ -44,7 +57,15 @@
       "refersTo": "button-primary",
       "description": "Sign in / primary confirm actions.",
       "html": "<button class=\"ds-btn-primary\">Sign in</button>",
-      "css": ".ds-btn-primary { background: #1d3a5f; color: #fff; padding: 11px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: background 0.15s ease; } .ds-btn-primary:hover { background: #14293f; } .ds-btn-primary:focus-visible { outline: 2px solid #1d3a5f; outline-offset: 2px; }"
+      "css": ".ds-btn-primary { background: #0c7770; color: #fff; padding: 11px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; transition: background 150ms ease, transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-primary:hover { background: #095a54; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #0c7770; outline-offset: 2px; }"
+    },
+    {
+      "name": "Navbar (Panel Chrome)",
+      "kind": "nav",
+      "refersTo": "panel-nav-link-active",
+      "description": "Sticky top navbar on a fixed charcoal panel, independent of OS light/dark theme, with an active nav-link tint.",
+      "html": "<nav class=\"ds-navbar\"><div class=\"ds-logo-chip\">ZAMZAM</div><a class=\"ds-nav-link ds-nav-link-active\">Inventory</a><a class=\"ds-nav-link\">Sales</a></nav>",
+      "css": ".ds-navbar { display: flex; align-items: center; gap: 16px; padding: 14px 20px; background: rgba(28,33,40,0.92); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); } .ds-logo-chip { background: #fff; border-radius: 8px; padding: 4px 8px; font-weight: 700; font-size: 11px; } .ds-nav-link { padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #9aa0a8; text-decoration: none; transition: background 150ms ease, color 150ms ease; } .ds-nav-link:hover { background: #262c35; color: #f4f5f6; } .ds-nav-link-active { background: rgba(45,212,201,0.14); color: #2dd4c9; }"
     },
     {
       "name": "Destructive Button",
@@ -58,9 +79,9 @@
       "name": "Part Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Compact inventory item card with thumbnail, status badge, and meta row.",
+      "description": "Compact inventory item card with thumbnail, status badge, and meta row — stays on light paper even though the chrome around it is dark.",
       "html": "<article class=\"ds-card\"><div class=\"ds-card-thumb\"></div><div class=\"ds-card-body\"><p class=\"ds-card-eyebrow\">Maruti Suzuki · K12</p><h3 class=\"ds-card-title\">Front Right Headlamp</h3><span class=\"ds-card-meta\">#OEM-4471</span></div></article>",
-      "css": ".ds-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #e3e3e8; border-radius: 14px; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08); border-color: rgba(29,58,95,0.35); } .ds-card-thumb { aspect-ratio: 4/3; background: #f0f0f3; } .ds-card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; } .ds-card-eyebrow { font-size: 12px; font-weight: 600; color: #1d3a5f; text-transform: uppercase; letter-spacing: 0.02em; margin: 0; } .ds-card-title { font-size: 14px; font-weight: 600; margin: 0; } .ds-card-meta { font-size: 12px; color: #66666f; }"
+      "css": ".ds-card { display: flex; flex-direction: column; background: #fff; border: 1px solid #e3e3e8; border-radius: 14px; overflow: hidden; transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease; } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08); border-color: rgba(12,119,112,0.35); } .ds-card:active { transform: translateY(-2px) scale(0.985); } .ds-card-thumb { aspect-ratio: 4/3; background: #f0f0f3; } .ds-card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; } .ds-card-eyebrow { font-size: 12px; font-weight: 600; color: #0c7770; text-transform: uppercase; letter-spacing: 0.02em; margin: 0; } .ds-card-title { font-size: 14px; font-weight: 600; margin: 0; } .ds-card-meta { font-size: 12px; color: #66666f; }"
     },
     {
       "name": "Status Badge",
@@ -76,40 +97,45 @@
       "refersTo": "input-search",
       "description": "Search bar with leading icon, used above every card grid.",
       "html": "<div class=\"ds-search\"><svg class=\"ds-search-icon\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m21 21-4.3-4.3\"/></svg><input class=\"ds-search-input\" placeholder=\"Search parts, SKU, vehicle…\" /></div>",
-      "css": ".ds-search { position: relative; display: flex; align-items: center; } .ds-search-icon { position: absolute; left: 13px; color: #93939c; } .ds-search-input { width: 100%; padding: 10px 34px 10px 36px; border: 1px solid #e3e3e8; border-radius: 14px; background: #fff; font-size: 14px; } .ds-search-input:focus { outline: none; border-color: rgba(29,58,95,0.35); box-shadow: 0 0 0 3px rgba(29,58,95,0.1); }"
+      "css": ".ds-search { position: relative; display: flex; align-items: center; } .ds-search-icon { position: absolute; left: 13px; color: #93939c; } .ds-search-input { width: 100%; padding: 10px 34px 10px 36px; border: 1px solid #e3e3e8; border-radius: 14px; background: #fff; font-size: 14px; } .ds-search-input:focus { outline: none; border-color: rgba(12,119,112,0.35); box-shadow: 0 0 0 3px rgba(12,119,112,0.1); }"
     },
     {
-      "name": "Segmented Tabs",
+      "name": "Segmented Tabs (Panel Chrome)",
       "kind": "nav",
       "refersTo": "tab-active",
-      "description": "Floating Cars/Parts pill switch on the Inventory page.",
+      "description": "Floating Cars/Parts pill switch on the Inventory page — charcoal panel like the navbar, not a light card.",
       "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Parts</button><button class=\"ds-tab\">Cars</button></div>",
-      "css": ".ds-tabs { display: inline-flex; gap: 2px; padding: 4px; background: #fff; border: 1px solid #e3e3e8; border-radius: 999px; box-shadow: 0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08); } .ds-tab { padding: 9px 20px; border: none; border-radius: 999px; background: transparent; color: #66666f; font-size: 14px; font-weight: 600; transition: background 0.18s ease, color 0.18s ease; } .ds-tab-active { background: #1d3a5f; color: #fff; }"
+      "css": ".ds-tabs { display: inline-flex; gap: 2px; padding: 4px; background: #1c2128; border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; box-shadow: 0 6px 16px -4px rgba(15,15,20,0.12), 0 2px 6px -2px rgba(15,15,20,0.08); } .ds-tab { padding: 9px 20px; border: none; border-radius: 999px; background: transparent; color: #9aa0a8; font-size: 14px; font-weight: 600; transition: background 180ms cubic-bezier(0.23,1,0.32,1), color 180ms cubic-bezier(0.23,1,0.32,1); } .ds-tab:active { transform: scale(0.96); } .ds-tab-active { background: #0c7770; color: #fff; }"
     }
   ],
   "narrative": {
     "northStar": "The Salvage Ledger",
-    "overview": "This is the tool a yard clerk trusts to be right, not the tool that tries to impress them. Every screen reads like a well-kept ledger for a working scrapyard: precise records of parts and donor vehicles, dense but never cluttered, calm enough to use standing at a counter and specific enough to trust at a desk. Personality is clean, modern, and trustworthy — restraint and clarity carry the design, not decoration. The system explicitly rejects the generic SaaS-dashboard look: no purple-gradient hero cards, no stock-icon card grids, no boilerplate admin-template chrome.",
+    "overview": "This is the tool a yard clerk trusts to be right, not the tool that tries to impress them. Every screen reads like a well-kept ledger for a working scrapyard: precise records of parts and donor vehicles, dense but never cluttered. The navbar and floating Cars/Parts tab island are a fixed charcoal 'control deck', always dark regardless of OS theme; every content surface (cards, modals) stays light for legibility of dense text and part photos. Personality is clean, modern, and trustworthy — restraint and clarity carry the design, not decoration. The system explicitly rejects the generic SaaS-dashboard look.",
     "keyCharacteristics": [
-      "Flat surfaces at rest; depth appears only as feedback (hover, focus, overlay), never as ambient decoration.",
-      "One accent color, used sparingly, for anything interactive or 'the primary action.'",
+      "The navbar and floating tab island are a fixed charcoal panel, always dark, like a tool's control deck — independent of OS light/dark preference.",
+      "All content surfaces (cards, modals, inputs) stay light/paper; only the chrome goes dark.",
+      "One teal accent color, used sparingly, plus a brighter cyan tint reserved for accent text on the dark chrome (contrast requires it).",
       "Dense information laid out with generous internal padding, not visual noise.",
       "Identical component vocabulary whether the screen is used one-handed on a phone at the yard or with a mouse at a desk."
     ],
     "rules": [
-      { "name": "The One Accent Rule", "body": "Ledger Navy is the only color used to mean 'interactive' or 'primary.' It never appears as pure decoration.", "section": "colors" },
+      { "name": "The One Accent Rule", "body": "Ledger Teal (or its accent-on-panel tint, on chrome only) is the only color used to mean 'interactive' or 'primary.' It never appears as pure decoration.", "section": "colors" },
+      { "name": "The Fixed Chrome Rule", "body": "Panel Charcoal marks 'this is the control deck' (navbar, tab switcher) regardless of OS theme. Content surfaces never get it.", "section": "colors" },
       { "name": "The No-Display-Size Rule", "body": "Nothing in this system exceeds 18px. Hierarchy comes from weight and color, not scale jumps.", "section": "typography" },
-      { "name": "The Flat-By-Default Rule", "body": "A card, input, or panel with no active interaction has no shadow — only a 1px hairline border.", "section": "elevation" }
+      { "name": "The Flat-By-Default Rule", "body": "A card, input, or panel with no active interaction has no shadow — only a 1px hairline border. The two chrome surfaces are the named exception.", "section": "elevation" }
     ],
     "dos": [
-      "Do use Ledger Navy (#1d3a5f / dark #3a6ea5) as the only accent — buttons, active states, focus rings, links.",
+      "Do use Ledger Teal (#0c7770 / dark-content #14847a) as the only accent on content surfaces.",
+      "Do use accent-on-panel (#2dd4c9), not the base teal, for accent text on Panel Charcoal.",
+      "Do keep Panel Charcoal scoped to the navbar and floating tab island only.",
       "Do keep cards and inputs flat (border only) at rest; add shadow-md only on hover/open/active states.",
-      "Do pair every signal color (danger/success/warning/info) with its one fixed meaning — never repurpose one for decoration.",
-      "Do keep type hierarchy to weight and color, capping size at 18px since this is a dense utility tool.",
-      "Do make every interactive control work identically at phone-in-hand and desk-with-mouse sizes."
+      "Do give every pressable control a subtle :active scale-down, gated behind prefers-reduced-motion.",
+      "Do pair every signal color (danger/success/warning/info) with its one fixed meaning."
     ],
     "donts": [
       "Don't reintroduce a generic SaaS-dashboard look: no purple/blue gradient hero cards, no stock-icon card grids.",
+      "Don't extend Panel Charcoal beyond the navbar and tab island.",
+      "Don't use the base Ledger Teal as text color on Panel Charcoal — use accent-on-panel instead.",
       "Don't add a colored border-left/border-right stripe as a decorative accent on any card or list row.",
       "Don't use background-clip: text gradient headings.",
       "Don't let a card or button carry both a soft wide drop shadow and a full 1px border as static decoration.",
