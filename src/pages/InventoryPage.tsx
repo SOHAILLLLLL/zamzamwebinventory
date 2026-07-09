@@ -1,12 +1,13 @@
+import { ArrowUpDown } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CarCard } from '../components/CarCard'
 import { CarDetailModal } from '../components/CarDetailModal'
 import { ChunkedGrid } from '../components/ChunkedGrid'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { FilterDropdown } from '../components/FilterDropdown'
 import { FloatingTabs, type InventoryTab } from '../components/FloatingTabs'
 import { PartCard } from '../components/PartCard'
 import { PartDetailModal } from '../components/PartDetailModal'
+import { type PartSort, PartsFilterModal } from '../components/PartsFilterModal'
 import { SearchBar } from '../components/SearchBar'
 import { SortMenu } from '../components/SortMenu'
 import { StatusFilterChips } from '../components/StatusFilterChips'
@@ -18,14 +19,7 @@ import { useInventoryItems } from '../hooks/useInventoryItems'
 import type { DonorVehicleListItem, InventoryListItem } from '../types/db'
 import styles from './InventoryPage.module.css'
 
-type PartSort = 'newest' | 'vehicle' | 'part_name'
 type CarSort = 'newest' | 'vehicle' | 'dismantling'
-
-const partSortOptions: { value: PartSort; label: string }[] = [
-  { value: 'newest', label: 'Newest first' },
-  { value: 'vehicle', label: 'Sort by vehicle' },
-  { value: 'part_name', label: 'Sort by part catalogue' },
-]
 
 const carSortOptions: { value: CarSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
@@ -65,6 +59,19 @@ function matchesCarSearch(vehicle: DonorVehicleListItem, query: string) {
   return haystack.includes(query)
 }
 
+function interleave<T>(lists: T[][]): T[] {
+  const result: T[] = []
+  const max = Math.max(0, ...lists.map((list) => list.length))
+  for (let i = 0; i < max; i++) {
+    for (const list of lists) {
+      if (list[i] !== undefined) result.push(list[i])
+    }
+  }
+  return result
+}
+
+const FALLBACK_SEARCH_EXAMPLES = ['ABS Sensor', 'Front Bumper', 'Alternator']
+
 export function InventoryPage() {
   const [tab, setTab] = useState<InventoryTab>('parts')
   const [search, setSearch] = useState('')
@@ -76,7 +83,9 @@ export function InventoryPage() {
   const [selectedCar, setSelectedCar] = useState<DonorVehicleListItem | null>(null)
   const [deletePartTarget, setDeletePartTarget] = useState<InventoryListItem | null>(null)
   const [deleteCarTarget, setDeleteCarTarget] = useState<DonorVehicleListItem | null>(null)
-  const [partNameFilter, setPartNameFilter] = useState<string | null>(null)
+  const [partVehicleIds, setPartVehicleIds] = useState<string[]>([])
+  const [partTypeFilter, setPartTypeFilter] = useState<string[]>([])
+  const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [carStatusFilter, setCarStatusFilter] = useState<string | null>(null)
 
   const partsQuery = useInventoryItems()
@@ -84,9 +93,35 @@ export function InventoryPage() {
   const deleteInventoryItem = useDeleteInventoryItem()
   const deleteDonorVehicle = useDeleteDonorVehicle()
 
-  const partNameOptions = useMemo(() => {
-    const names = new Set((partsQuery.data ?? []).map((item) => item.item_name))
-    return [...names].sort((a, b) => a.localeCompare(b))
+  const searchExamples = useMemo(() => {
+    const items = partsQuery.data ?? []
+    const names: string[] = []
+    const models: string[] = []
+    const codes: string[] = []
+    const seenNames = new Set<string>()
+    const seenModels = new Set<string>()
+    const seenCodes = new Set<string>()
+
+    for (const item of items) {
+      if (item.item_name && !seenNames.has(item.item_name) && names.length < 3) {
+        seenNames.add(item.item_name)
+        names.push(item.item_name)
+      }
+      const app = item.donor_vehicle?.vehicle_application
+      const model = [app?.make, app?.model].filter(Boolean).join(' ')
+      if (model && !seenModels.has(model) && models.length < 3) {
+        seenModels.add(model)
+        models.push(model)
+      }
+      if (app?.generation_code && !seenCodes.has(app.generation_code) && codes.length < 3) {
+        seenCodes.add(app.generation_code)
+        codes.push(app.generation_code)
+      }
+      if (names.length >= 3 && models.length >= 3 && codes.length >= 3) break
+    }
+
+    const combined = interleave([names, models, codes])
+    return combined.length > 0 ? combined : FALLBACK_SEARCH_EXAMPLES
   }, [partsQuery.data])
 
   const carStatusOptions = useMemo(() => {
@@ -98,8 +133,13 @@ export function InventoryPage() {
     const query = debouncedSearch.trim().toLowerCase()
     const items = partsQuery.data ?? []
     let filtered = query ? items.filter((item) => matchesPartSearch(item, query)) : items
-    if (partNameFilter) {
-      filtered = filtered.filter((item) => item.item_name === partNameFilter)
+    if (partVehicleIds.length > 0) {
+      const idSet = new Set(partVehicleIds)
+      filtered = filtered.filter((item) => item.donor_vehicle && idSet.has(item.donor_vehicle.id))
+    }
+    if (partTypeFilter.length > 0) {
+      const typeSet = new Set(partTypeFilter)
+      filtered = filtered.filter((item) => item.part_catalog?.part_type && typeSet.has(item.part_catalog.part_type))
     }
     const sorted = [...filtered]
 
@@ -114,7 +154,7 @@ export function InventoryPage() {
     }
 
     return sorted
-  }, [partsQuery.data, debouncedSearch, partSort, partNameFilter])
+  }, [partsQuery.data, debouncedSearch, partSort, partVehicleIds, partTypeFilter])
 
   const filteredSortedCars = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase()
@@ -162,18 +202,23 @@ export function InventoryPage() {
           value={search}
           onChange={setSearch}
           placeholder={tab === 'parts' ? 'Search parts, SKU, vehicle…' : 'Search cars, tag code, VIN…'}
+          examples={tab === 'parts' ? searchExamples : undefined}
         />
         {tab === 'parts' ? (
-          <>
-            <FilterDropdown
-              label="Part catalogue"
-              allLabel="All parts"
-              options={partNameOptions}
-              value={partNameFilter}
-              onChange={setPartNameFilter}
-            />
-            <SortMenu value={partSort} onChange={setPartSort} options={partSortOptions} />
-          </>
+          <button
+            type="button"
+            className={`${styles.sortButton} ${
+              partVehicleIds.length > 0 || partTypeFilter.length > 0 ? styles.sortButtonActive : ''
+            }`}
+            onClick={() => setFilterModalOpen(true)}
+            aria-haspopup="dialog"
+          >
+            <ArrowUpDown size={15} />
+            Sort
+            {partVehicleIds.length + partTypeFilter.length > 0 && (
+              <span className={styles.sortButtonBadge}>{partVehicleIds.length + partTypeFilter.length}</span>
+            )}
+          </button>
         ) : (
           <SortMenu value={carSort} onChange={setCarSort} options={carSortOptions} />
         )}
@@ -191,8 +236,12 @@ export function InventoryPage() {
             <ChunkedGrid
               items={filteredSortedParts}
               keyFor={(item) => item.id}
-              resetKey={`${debouncedSearch}-${partSort}-${partNameFilter}`}
-              emptyMessage={debouncedSearch ? 'No parts match your search.' : 'No inventory items yet.'}
+              resetKey={`${debouncedSearch}-${partSort}-${partVehicleIds.join(',')}-${partTypeFilter.join(',')}`}
+              emptyMessage={
+                debouncedSearch || partVehicleIds.length > 0 || partTypeFilter.length > 0
+                  ? 'No parts match your search or filters.'
+                  : 'No inventory items yet.'
+              }
               renderItem={(item) => (
                 <PartCard
                   item={item}
@@ -227,6 +276,22 @@ export function InventoryPage() {
             />
           )}
         </>
+      )}
+
+      {filterModalOpen && (
+        <PartsFilterModal
+          items={partsQuery.data ?? []}
+          initialSort={partSort}
+          initialVehicleIds={partVehicleIds}
+          initialPartTypes={partTypeFilter}
+          onApply={({ sort, vehicleIds, partTypes }) => {
+            setPartSort(sort)
+            setPartVehicleIds(vehicleIds)
+            setPartTypeFilter(partTypes)
+            setFilterModalOpen(false)
+          }}
+          onClose={() => setFilterModalOpen(false)}
+        />
       )}
 
       {selectedPart && (
