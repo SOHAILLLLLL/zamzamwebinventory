@@ -1,9 +1,43 @@
-import { jsPDF } from 'jspdf'
-import { formatStatus } from '../components/Badge'
+import { GState, jsPDF } from 'jspdf'
+import { type BadgeTone, formatStatus, statusTone } from '../components/Badge'
 import type { DonorVehicleListItem, InventoryListItem } from '../types/db'
-import { getSignedPhotoUrl, type PhotoBucket } from './photos'
+import { getSignedPhotoUrls, type PhotoBucket } from './photos'
 
-const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
+// jsPDF's base14 fonts (helvetica) only cover WinAnsi/Latin-1 — the ₹ glyph from Intl's
+// currency formatter isn't in that set and renders as mojibake. Spell out "Rs." instead.
+function formatCurrencyPdf(amount: number): string {
+  return `Rs. ${Math.round(amount).toLocaleString('en-IN')}`
+}
+
+type Rgb = [number, number, number]
+
+// Sampled from public/zamzam.png's stroke color so the accent rule matches the logo exactly.
+const ACCENT: Rgb = [222, 58, 59]
+const INK: Rgb = [23, 24, 28]
+const MUTED: Rgb = [102, 102, 111]
+const FAINT: Rgb = [147, 147, 156]
+const LINE: Rgb = [227, 227, 232]
+const WATERMARK_GRAY: Rgb = [128, 128, 134]
+
+const STATUS_RGB: Record<BadgeTone, Rgb> = {
+  success: [22, 163, 74],
+  danger: [220, 38, 38],
+  warning: [217, 119, 6],
+  info: [37, 99, 235],
+  neutral: [102, 102, 111],
+}
+
+const STATUS_TINT: Record<BadgeTone, Rgb> = {
+  success: [230, 247, 235],
+  danger: [253, 232, 232],
+  warning: [253, 240, 219],
+  info: [223, 234, 253],
+  neutral: [240, 240, 243],
+}
+
+const MARGIN = 42
+const FOOTER_OFFSET = 46
+const BRAND_LINE = 'ZamZam Auto Parts — Narol, Ahmedabad'
 
 interface PdfSection {
   heading: string
@@ -12,6 +46,11 @@ interface PdfSection {
 
 interface LoadedImage {
   dataUrl: string
+  width: number
+  height: number
+}
+
+interface PageSize {
   width: number
   height: number
 }
@@ -44,94 +83,220 @@ function fitWithinBox(width: number, height: number, maxWidth: number, maxHeight
   return { width: width * ratio, height: height * ratio }
 }
 
+function formatFromDataUrl(dataUrl: string): string {
+  const ext = (/^data:image\/(\w+);/.exec(dataUrl)?.[1] ?? 'jpeg').toUpperCase()
+  return ext === 'JPG' ? 'JPEG' : ext
+}
+
+let logoPromise: Promise<LoadedImage | null> | null = null
+function loadLogo() {
+  logoPromise ??= loadImageWithDimensions('/zamzam.png')
+  return logoPromise
+}
+
+/** Large, low-opacity rotated wordmark behind the page content — printed and reused-photo protection. */
+function drawWatermark(doc: jsPDF, width: number, height: number) {
+  doc.saveGraphicsState()
+  doc.setGState(new GState({ opacity: 0.06 }))
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(36)
+  doc.setTextColor(...WATERMARK_GRAY)
+  doc.text('ZAMZAM AUTO PARTS', width / 2, height / 2, { align: 'center', baseline: 'middle', angle: 28 })
+  doc.restoreGraphicsState()
+}
+
+const HEADER_TOP = 24
+const HEADER_LOGO_SIZE = 46
+
+/** Logo + accent rule at the top of every page. Returns the y where page content should start. */
+function drawHeader(doc: jsPDF, width: number, logo: LoadedImage | null): number {
+  if (logo) {
+    const box = fitWithinBox(logo.width, logo.height, HEADER_LOGO_SIZE, HEADER_LOGO_SIZE)
+    doc.addImage(logo.dataUrl, 'PNG', MARGIN, HEADER_TOP, box.width, box.height)
+  }
+  const ruleY = HEADER_TOP + HEADER_LOGO_SIZE + 14
+  doc.setDrawColor(...ACCENT)
+  doc.setLineWidth(1.6)
+  doc.line(MARGIN, ruleY, width - MARGIN, ruleY)
+  return ruleY + 30
+}
+
+/** Hairline + address at the bottom of every page. Page numbers are stamped in a final pass. */
+function drawFooterChrome(doc: jsPDF, width: number, height: number) {
+  const y = height - FOOTER_OFFSET
+  doc.setDrawColor(...LINE)
+  doc.setLineWidth(1)
+  doc.line(MARGIN, y, width - MARGIN, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(...FAINT)
+  doc.text(BRAND_LINE, MARGIN, y + 16)
+}
+
+function drawStatusChip(doc: jsPDF, rightX: number, centerY: number, label: string, tone: BadgeTone) {
+  const text = label.toUpperCase()
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8.5)
+  const chipW = doc.getTextWidth(text) + 16
+  const chipH = 16
+  const chipX = rightX - chipW
+  const chipY = centerY - chipH / 2
+  doc.setFillColor(...STATUS_TINT[tone])
+  doc.roundedRect(chipX, chipY, chipW, chipH, chipH / 2, chipH / 2, 'F')
+  doc.setTextColor(...STATUS_RGB[tone])
+  doc.text(text, chipX + chipW / 2, chipY + chipH / 2 + 0.5, { align: 'center', baseline: 'middle' })
+}
+
+/** Starts a fresh page (any orientation), draws its chrome, and returns the usable content box. */
+function openPage(
+  doc: jsPDF,
+  orientation: 'portrait' | 'landscape',
+  logo: LoadedImage | null,
+  pageSizes: PageSize[],
+  isFirstPage: boolean,
+) {
+  if (!isFirstPage) doc.addPage('a4', orientation)
+  const width = doc.internal.pageSize.getWidth()
+  const height = doc.internal.pageSize.getHeight()
+  pageSizes.push({ width, height })
+  const contentTop = drawHeader(doc, width, logo)
+  drawFooterChrome(doc, width, height)
+  return { width, height, contentTop, contentBottom: height - FOOTER_OFFSET }
+}
+
+function stampPageNumbers(doc: jsPDF, pageSizes: PageSize[]) {
+  pageSizes.forEach((page, index) => {
+    doc.setPage(index + 1)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(...FAINT)
+    doc.text(`Page ${index + 1} of ${pageSizes.length}`, page.width - MARGIN, page.height - FOOTER_OFFSET + 16, {
+      align: 'right',
+    })
+  })
+}
+
 async function buildSpecSheetPdf(options: {
   title: string
-  subtitle?: string
+  subtitle: string
+  statusLabel: string
+  statusTone: BadgeTone
   bucket: PhotoBucket
-  photoPath: string | null
+  photoPaths: string[]
   sections: PdfSection[]
 }): Promise<Blob> {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-  const marginX = 40
-  let y = 30
+  const logo = await loadLogo()
+  const pageSizes: PageSize[] = []
+  const VALUE_X = MARGIN + 170
+  const LINE_HEIGHT = 13
 
-  const logo = await loadImageWithDimensions('/zamzam.png')
-  if (logo) {
-    const box = fitWithinBox(logo.width, logo.height, 90, 40)
-    doc.addImage(logo.dataUrl, 'PNG', marginX, y, box.width, box.height)
-    y += box.height + 18
-  }
+  let page = openPage(doc, 'portrait', logo, pageSizes, true)
+  drawWatermark(doc, page.width, page.height)
+  let y = page.contentTop
 
-  doc.setFontSize(18)
-  doc.setFont('helvetica', 'bold')
-  doc.text(options.title, marginX, y)
-  y += 20
-
-  if (options.subtitle) {
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(110)
-    doc.text(options.subtitle, marginX, y)
-    doc.setTextColor(20)
-    y += 24
-  }
-
-  if (options.photoPath) {
-    const signedUrl = await getSignedPhotoUrl(options.bucket, options.photoPath)
-    const photo = signedUrl ? await loadImageWithDimensions(signedUrl) : null
-    if (photo) {
-      try {
-        const box = fitWithinBox(photo.width, photo.height, 220, 165)
-        doc.addImage(photo.dataUrl, 'JPEG', marginX, y, box.width, box.height)
-        y += box.height + 16
-      } catch {
-        // Unsupported image format — skip the photo rather than fail the whole PDF.
-      }
+  function ensureSpace(needed: number) {
+    if (y + needed > page.contentBottom) {
+      page = openPage(doc, 'portrait', logo, pageSizes, false)
+      drawWatermark(doc, page.width, page.height)
+      y = page.contentTop
     }
   }
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(21)
+  doc.setTextColor(...INK)
+  doc.text(options.title, MARGIN, y)
+
+  drawStatusChip(doc, page.width - MARGIN, y - 7, options.statusLabel, options.statusTone)
+  y += 22
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+  doc.setTextColor(...MUTED)
+  doc.text(options.subtitle, MARGIN, y)
+  y += 28
 
   for (const section of options.sections) {
-    if (y > 700) {
-      doc.addPage()
-      y = 50
-    }
-    doc.setFontSize(12)
+    ensureSpace(34)
     doc.setFont('helvetica', 'bold')
-    doc.text(section.heading, marginX, y)
-    y += 18
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10.5)
+    doc.setFontSize(12)
+    doc.setTextColor(...INK)
+    doc.text(section.heading, MARGIN, y)
+    y += 6
+    doc.setDrawColor(...ACCENT)
+    doc.setLineWidth(1.2)
+    doc.line(MARGIN, y, MARGIN + 26, y)
+    y += 16
 
     for (const [label, value] of section.rows) {
-      if (y > 760) {
-        doc.addPage()
-        y = 50
-      }
-      doc.setTextColor(110)
-      doc.text(label, marginX, y)
-      doc.setTextColor(20)
-      doc.text(value || '—', marginX + 150, y)
-      y += 16
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10.5)
+      const maxValueWidth = page.width - VALUE_X - MARGIN
+      const lines = doc.splitTextToSize(value || '—', maxValueWidth) as string[]
+      const rowHeight = lines.length * LINE_HEIGHT
+      ensureSpace(rowHeight + 4)
+
+      doc.setTextColor(...MUTED)
+      doc.text(label, MARGIN, y)
+      doc.setTextColor(...INK)
+      lines.forEach((line, index) => doc.text(line, VALUE_X, y + index * LINE_HEIGHT))
+      y += rowHeight + 4
     }
-    y += 12
+    y += 14
   }
 
-  doc.setFontSize(9)
-  doc.setTextColor(150)
-  doc.text('ZamZam Auto Parts — Narol, Ahmedabad', marginX, 812)
+  const photoPaths = options.photoPaths.filter(Boolean)
+  if (photoPaths.length > 0) {
+    const signedUrls = await getSignedPhotoUrls(options.bucket, photoPaths)
+    for (let i = 0; i < photoPaths.length; i++) {
+      const signedUrl = signedUrls[i]
+      const photo = signedUrl ? await loadImageWithDimensions(signedUrl) : null
+      if (!photo) continue
 
+      const orientation = photo.width >= photo.height ? 'landscape' : 'portrait'
+      const photoPage = openPage(doc, orientation, logo, pageSizes, false)
+      const captionH = 22
+      const maxWidth = photoPage.width - MARGIN * 2
+      const maxHeight = photoPage.contentBottom - photoPage.contentTop - captionH
+      const box = fitWithinBox(photo.width, photo.height, maxWidth, maxHeight)
+      const boxX = photoPage.width / 2 - box.width / 2
+      const boxY = photoPage.contentTop + Math.max(0, (maxHeight - box.height) / 2)
+
+      try {
+        doc.addImage(photo.dataUrl, formatFromDataUrl(photo.dataUrl), boxX, boxY, box.width, box.height)
+        // Watermark goes on top of the photo here (unlike the info pages) so it stays visible
+        // instead of being painted over — this is what actually protects/brands the image.
+        drawWatermark(doc, photoPage.width, photoPage.height)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9.5)
+        doc.setTextColor(...MUTED)
+        doc.text(`Photo ${i + 1} of ${photoPaths.length}`, photoPage.width / 2, boxY + box.height + 18, {
+          align: 'center',
+        })
+      } catch {
+        // Unsupported image format (e.g. WEBP) — drop this page rather than fail the whole document.
+      }
+    }
+  }
+
+  stampPageNumbers(doc, pageSizes)
   return doc.output('blob')
 }
 
 export async function buildPartPdf(item: InventoryListItem): Promise<Blob> {
   const vehicle = item.donor_vehicle?.vehicle_application
   const part = item.part_catalog
+  const modelYears =
+    vehicle?.year_from || vehicle?.year_to ? `${vehicle?.year_from ?? '—'} – ${vehicle?.year_to ?? '—'}` : '—'
 
   return buildSpecSheetPdf({
     title: item.item_name,
     subtitle: `SKU ${item.sku}`,
+    statusLabel: formatStatus(item.status),
+    statusTone: statusTone(item.status),
     bucket: 'part-photos',
-    photoPath: item.photos[0] ?? null,
+    photoPaths: item.photos,
     sections: [
       {
         heading: 'Part',
@@ -140,6 +305,7 @@ export async function buildPartPdf(item: InventoryListItem): Promise<Blob> {
           ['Type', part?.part_type || '—'],
           ['Category', part?.category || '—'],
           ['Side', part?.side || '—'],
+          ['Description', part?.description || '—'],
           ['Condition grade', item.condition_grade || '—'],
         ],
       },
@@ -148,17 +314,27 @@ export async function buildPartPdf(item: InventoryListItem): Promise<Blob> {
         rows: [
           ['Make', vehicle?.make || '—'],
           ['Model', vehicle?.model || '—'],
+          ['Variant', vehicle?.variant || '—'],
           ['Generation', vehicle?.generation_code || '—'],
+          ['Body style', vehicle?.body_style || '—'],
+          ['Model years', modelYears],
           ['Tag code', item.donor_vehicle?.tag_code || '—'],
+        ],
+      },
+      {
+        heading: 'Condition & testing',
+        rows: [
+          ['Tested', item.tested ? 'Yes' : item.tested === false ? 'No' : 'Unknown'],
+          ['Test notes', item.test_notes || '—'],
+          ['Paired set', item.paired_set_ref || '—'],
         ],
       },
       {
         heading: 'Inventory',
         rows: [
-          ['Status', formatStatus(item.status)],
-          ['Tested', item.tested ? 'Yes' : item.tested === false ? 'No' : 'Unknown'],
           ['Shelf location', item.shelf_location || 'Unassigned'],
-          ['Price', item.price != null ? currency.format(item.price) : '—'],
+          ['Price', item.price != null ? formatCurrencyPdf(item.price) : '—'],
+          ['Listed', new Date(item.created_at).toLocaleDateString('en-IN')],
         ],
       },
     ],
@@ -168,20 +344,25 @@ export async function buildPartPdf(item: InventoryListItem): Promise<Blob> {
 export async function buildCarPdf(vehicle: DonorVehicleListItem): Promise<Blob> {
   const app = vehicle.vehicle_application
   const title = [app?.make, app?.model].filter(Boolean).join(' ') || vehicle.tag_code
+  const modelYears = app?.year_from || app?.year_to ? `${app?.year_from ?? '—'} – ${app?.year_to ?? '—'}` : '—'
 
   return buildSpecSheetPdf({
     title,
     subtitle: `Tag code ${vehicle.tag_code}`,
+    statusLabel: formatStatus(vehicle.status),
+    statusTone: statusTone(vehicle.status),
     bucket: 'car-photos',
-    photoPath: vehicle.photos[0] ?? null,
+    photoPaths: vehicle.photos,
     sections: [
       {
         heading: 'Vehicle',
         rows: [
-          ['Generation', app?.generation_code || '—'],
+          ['Make', app?.make || '—'],
+          ['Model', app?.model || '—'],
           ['Variant', app?.variant || '—'],
+          ['Generation', app?.generation_code || '—'],
           ['Body style', app?.body_style || '—'],
-          ['Model years', `${app?.year_from ?? '—'} – ${app?.year_to ?? '—'}`],
+          ['Model years', modelYears],
         ],
       },
       {
@@ -195,13 +376,18 @@ export async function buildCarPdf(vehicle: DonorVehicleListItem): Promise<Blob> 
       {
         heading: 'Acquisition',
         rows: [
-          ['Status', formatStatus(vehicle.status)],
           ['Source', vehicle.source || '—'],
-          ['Purchase price', vehicle.purchase_price != null ? currency.format(vehicle.purchase_price) : '—'],
-          [
-            'Purchase date',
-            vehicle.purchase_date ? new Date(vehicle.purchase_date).toLocaleDateString('en-IN') : '—',
-          ],
+          ['Purchase price', vehicle.purchase_price != null ? formatCurrencyPdf(vehicle.purchase_price) : '—'],
+          ['Purchase date', vehicle.purchase_date ? new Date(vehicle.purchase_date).toLocaleDateString('en-IN') : '—'],
+          ['Scrap certificate', vehicle.scrap_cert_ref || '—'],
+          ['Scrap value', vehicle.scrap_value != null ? formatCurrencyPdf(vehicle.scrap_value) : '—'],
+        ],
+      },
+      {
+        heading: 'Fleet',
+        rows: [
+          ['In fleet', vehicle.in_fleet ? 'Yes' : 'No'],
+          ['Listed', new Date(vehicle.created_at).toLocaleDateString('en-IN')],
         ],
       },
     ],
