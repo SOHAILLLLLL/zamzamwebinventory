@@ -301,7 +301,7 @@ export async function buildPartPdf(item: InventoryListItem): Promise<Blob> {
       {
         heading: 'Part',
         rows: [
-          ['Part number', part?.primary_oem_number || '—'],
+          ['Part number', item.part_number || part?.primary_oem_number || '—'],
           ['Type', part?.part_type || '—'],
           ['Category', part?.category || '—'],
           ['Side', part?.side || '—'],
