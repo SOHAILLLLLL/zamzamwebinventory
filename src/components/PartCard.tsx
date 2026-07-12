@@ -15,7 +15,7 @@ interface PartCardProps {
 export function PartCard({ item, onOpen, onDelete }: PartCardProps) {
   const vehicle = item.donor_vehicle?.vehicle_application
   const vehicleLine = [vehicle?.make, vehicle?.generation_code].filter(Boolean).join(' · ')
-  const partNumber = item.part_catalog?.primary_oem_number || item.sku
+  const partNumber = item.part_number || item.part_catalog?.primary_oem_number || item.sku
 
   async function handleSharePdf() {
     const blob = await buildPartPdf(item)

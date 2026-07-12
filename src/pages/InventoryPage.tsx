@@ -31,6 +31,7 @@ function matchesPartSearch(item: InventoryListItem, query: string) {
   const haystack = [
     item.item_name,
     item.sku,
+    item.part_number,
     item.part_catalog?.primary_oem_number,
     item.donor_vehicle?.vehicle_application?.make,
     item.donor_vehicle?.vehicle_application?.model,

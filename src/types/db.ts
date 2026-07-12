@@ -65,6 +65,7 @@ export interface InventoryItem {
   created_at: string
   is_bk: boolean
   item_name: string
+  part_number: string | null
 }
 
 export type VehicleApplicationSummary = Pick<

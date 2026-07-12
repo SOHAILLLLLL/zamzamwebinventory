@@ -62,7 +62,7 @@ export function PartDetailModal({ item, onClose, onDelete }: PartDetailModalProp
 
       <DetailSection title="Part">
         <DetailRow label="SKU" value={item.sku} />
-        <DetailRow label="Part number" value={part?.primary_oem_number || '—'} />
+        <DetailRow label="Part number" value={item.part_number || part?.primary_oem_number || '—'} />
         <DetailRow label="Type" value={part?.part_type || '—'} />
         <DetailRow label="Category" value={part?.category || '—'} />
         {part?.side && <DetailRow label="Side" value={part.side} />}
