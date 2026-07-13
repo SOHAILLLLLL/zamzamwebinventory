@@ -130,6 +130,12 @@ export function InventoryPage() {
     return [...statuses].sort((a, b) => a.localeCompare(b))
   }, [carsQuery.data])
 
+  const partStatusOptions = useMemo(() => {
+    const statuses = new Set((partsQuery.data ?? []).map((item) => item.status))
+    if (selectedPart) statuses.add(selectedPart.status)
+    return [...statuses].sort((a, b) => a.localeCompare(b))
+  }, [partsQuery.data, selectedPart])
+
   const filteredSortedParts = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase()
     const items = partsQuery.data ?? []
@@ -298,8 +304,10 @@ export function InventoryPage() {
       {selectedPart && (
         <PartDetailModal
           item={selectedPart}
+          statusOptions={partStatusOptions}
           onClose={() => setSelectedPart(null)}
           onDelete={() => setDeletePartTarget(selectedPart)}
+          onSaved={(updates) => setSelectedPart((prev) => (prev ? { ...prev, ...updates } : prev))}
         />
       )}
 
