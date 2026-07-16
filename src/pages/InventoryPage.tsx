@@ -1,5 +1,6 @@
-import { ArrowUpDown } from 'lucide-react'
+import { ArrowUpDown, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { AddPartWizard } from '../components/AddPartWizard'
 import { CarCard } from '../components/CarCard'
 import { CarDetailModal } from '../components/CarDetailModal'
 import { ChunkedGrid } from '../components/ChunkedGrid'
@@ -88,6 +89,7 @@ export function InventoryPage() {
   const [partTypeFilter, setPartTypeFilter] = useState<string[]>([])
   const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [carStatusFilter, setCarStatusFilter] = useState<string | null>(null)
+  const [addPartOpen, setAddPartOpen] = useState(false)
 
   const partsQuery = useInventoryItems()
   const carsQuery = useDonorVehicles()
@@ -350,6 +352,19 @@ export function InventoryPage() {
           }}
         />
       )}
+
+      {tab === 'parts' && (
+        <button
+          type="button"
+          className={styles.addPartFab}
+          onClick={() => setAddPartOpen(true)}
+          aria-label="Add part to inventory"
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
+      )}
+
+      {addPartOpen && <AddPartWizard onClose={() => setAddPartOpen(false)} />}
     </div>
   )
 }
