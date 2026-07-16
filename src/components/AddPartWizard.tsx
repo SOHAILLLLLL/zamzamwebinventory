@@ -180,7 +180,7 @@ export function AddPartWizard({ onClose }: AddPartWizardProps) {
     }
     if (accepted.length > 0) setPhotos((prev) => [...prev, ...accepted])
     setPhotoError(
-      rejected > 0 ? `${rejected} file${rejected === 1 ? '' : 's'} skipped — use JPEG, PNG, or WEBP under 10MB.` : null,
+      rejected > 0 ? `${rejected} file${rejected === 1 ? '' : 's'} skipped — use JPEG, PNG, or WEBP under 30MB.` : null,
     )
   }
 
