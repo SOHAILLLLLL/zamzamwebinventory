@@ -68,6 +68,11 @@ export interface InventoryItem {
   part_number: string | null
 }
 
+export interface Fitment {
+  part_catalog_id: string
+  vehicle_application_id: string
+}
+
 export type VehicleApplicationSummary = Pick<
   VehicleApplication,
   'id' | 'make' | 'model' | 'variant' | 'generation_code' | 'year_from' | 'year_to' | 'body_style'
