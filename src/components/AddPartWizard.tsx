@@ -8,6 +8,7 @@ import { useFitment } from '../hooks/useFitment'
 import { usePartCatalog } from '../hooks/usePartCatalog'
 import { isSupportedPhotoFile } from '../lib/photos'
 import type { DonorVehicleListItem, PartCatalog } from '../types/db'
+import { AddDonorVehicleForm } from './AddDonorVehicleForm'
 import { Badge, formatStatus, statusTone } from './Badge'
 import { LazyImage } from './LazyImage'
 import styles from './AddPartWizard.module.css'
@@ -63,6 +64,7 @@ export function AddPartWizard({ onClose }: AddPartWizardProps) {
 
   const [selectedVehicle, setSelectedVehicle] = useState<DonorVehicleListItem | null>(null)
   const [selectedPart, setSelectedPart] = useState<PartCatalog | null>(null)
+  const [vehicleMode, setVehicleMode] = useState<'existing' | 'new'>('existing')
 
   const [vehicleQuery, setVehicleQuery] = useState('')
   const [partQuery, setPartQuery] = useState('')
@@ -143,7 +145,12 @@ export function AddPartWizard({ onClose }: AddPartWizardProps) {
       setPartQuery('')
     }
     setSelectedVehicle(vehicle)
+    setVehicleMode('existing')
     setStep('part')
+  }
+
+  function handleVehicleCreated(vehicle: DonorVehicleListItem) {
+    handleSelectVehicle(vehicle)
   }
 
   function handleSelectPart(part: PartCatalog) {
@@ -308,7 +315,11 @@ export function AddPartWizard({ onClose }: AddPartWizardProps) {
         )}
 
         <div className={styles.body}>
-          {step === 'vehicle' && (
+          {step === 'vehicle' && vehicleMode === 'new' && (
+            <AddDonorVehicleForm onCreated={handleVehicleCreated} onCancel={() => setVehicleMode('existing')} />
+          )}
+
+          {step === 'vehicle' && vehicleMode === 'existing' && (
             <>
               <div className={styles.searchWrap}>
                 <Search size={14} className={styles.searchIcon} />
@@ -321,6 +332,10 @@ export function AddPartWizard({ onClose }: AddPartWizardProps) {
                   autoFocus
                 />
               </div>
+
+              <button type="button" className={styles.addNewLink} onClick={() => setVehicleMode('new')}>
+                Can't find this car? + Add a new vehicle
+              </button>
 
               {vehiclesQuery.isLoading && <p className={styles.status}>Loading vehicles…</p>}
               {vehiclesQuery.isError && <p className={styles.statusError}>Couldn't load vehicles. Try refreshing.</p>}

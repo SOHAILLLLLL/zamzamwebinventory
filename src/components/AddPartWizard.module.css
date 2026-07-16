@@ -635,6 +635,86 @@
   margin-top: 8px;
 }
 
+.addNewLink {
+  align-self: flex-start;
+  margin: 0 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.addNewLink:hover {
+  text-decoration: underline;
+}
+
+.backLink {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.backLink:hover {
+  color: var(--text);
+}
+
+.inlinePicker {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.inlinePickerSearch {
+  position: relative;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.inlinePickerList {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.selectedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.selectedChip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+}
+
+.formActions {
+  display: flex;
+  gap: 10px;
+  padding-top: 6px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overlay,
   .panel {
