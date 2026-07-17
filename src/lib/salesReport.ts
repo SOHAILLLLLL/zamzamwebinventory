@@ -5,6 +5,7 @@ import {
   FAINT,
   formatCurrencyPdf,
   INK,
+  LINE,
   loadLogo,
   MARGIN,
   MUTED,
@@ -18,22 +19,50 @@ export interface SalesReportInput {
   rangeLabel: string
 }
 
-const ROW_HEIGHT = 16
-const COL_DATE_W = 62
-const COL_AMOUNT_W = 80
+// Indents for the record layout (a numbered entry per sale, not a table row) —
+// meta/dispatch text sits under the customer name, items sit one level deeper.
+const ENTRY_INDENT = 14
+const ITEM_INDENT = 20
+const AMOUNT_COL_W = 78
+const HEADER_LINE_H = 16
+const META_LINE_H = 13
+const ITEM_LINE_H = 12
+const NOTE_LINE_H = 13
+const ENTRY_TRAILING_GAP = 16
 
 function customerName(sale: SaleListItem): string {
   return sale.customer?.name || 'Walk-in'
 }
 
-// Every item is listed on its own wrapped line — no "+N more" truncation. The row's height
-// (see drawSection) grows to fit however many lines this produces.
-function itemLines(doc: jsPDF, sale: SaleListItem, maxWidth: number): string[] {
-  if (sale.sale_item.length === 0) return ['—']
-  return sale.sale_item.flatMap((item) => {
-    const label = `${item.description}${item.inventory_item?.sku ? ` (${item.inventory_item.sku})` : ''} × ${item.quantity}`
-    return doc.splitTextToSize(label, maxWidth) as string[]
-  })
+function contactLine(sale: SaleListItem): string {
+  const customer = sale.customer
+  const cityState = [customer?.city, customer?.state].filter(Boolean).join(', ')
+  const parts = [customer?.mobile, cityState].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : 'No contact details on file'
+}
+
+function dispatchLine(sale: SaleListItem): string {
+  if (sale.is_carrying) return 'Customer pickup'
+  const details = [sale.transport_company, sale.lr_number && `LR ${sale.lr_number}`].filter(Boolean).join(' · ')
+  return details ? `Parcel · ${details}` : 'Parcel · transport details pending'
+}
+
+// One wrapped line per item, each carrying its own amount — never truncated. Measuring
+// happens in the same font/size the line is actually drawn in (normal, not whatever bold
+// heading text left the doc set to), so the wrap width is accurate.
+function itemLineGroups(doc: jsPDF, sale: SaleListItem, maxWidth: number): { lines: string[]; amount: number }[] {
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9.5)
+  if (sale.sale_item.length === 0) {
+    return [{ lines: ['No items on file'], amount: 0 }]
+  }
+  return sale.sale_item.map((item) => ({
+    lines: doc.splitTextToSize(
+      `${item.description}${item.inventory_item?.sku ? ` (${item.inventory_item.sku})` : ''} × ${item.quantity}`,
+      maxWidth,
+    ) as string[],
+    amount: item.unit_price * item.quantity,
+  }))
 }
 
 export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInput): Promise<Blob> {
@@ -61,35 +90,91 @@ export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInpu
   doc.setFontSize(11)
   doc.setTextColor(...MUTED)
   doc.text(rangeLabel, MARGIN, y)
-  y += 30
+  y += 32
 
-  const customerColX = MARGIN + COL_DATE_W + 8
-  const amountColX = page.width - MARGIN
-  const itemsColX = customerColX + 150
-  const itemsColWidth = amountColX - COL_AMOUNT_W - itemsColX - 8
+  function drawEntry(sale: SaleListItem, serial: number) {
+    const itemMaxWidth = page.width - MARGIN - ITEM_INDENT - AMOUNT_COL_W - 10
+    const groups = itemLineGroups(doc, sale, itemMaxWidth)
+    const itemLineCount = groups.reduce((sum, group) => sum + group.lines.length, 0)
+    const notes = sale.notes?.trim() || null
+    const showDispatch = !sale.is_carrying
 
-  function drawTableHeader() {
-    ensureSpace(ROW_HEIGHT + 6)
+    const entryHeight =
+      HEADER_LINE_H +
+      META_LINE_H +
+      (showDispatch ? META_LINE_H : 0) +
+      itemLineCount * ITEM_LINE_H +
+      (notes ? NOTE_LINE_H : 0) +
+      ENTRY_TRAILING_GAP
+
+    ensureSpace(entryHeight)
+
+    const nameMaxWidth = page.width - MARGIN * 2 - AMOUNT_COL_W - 16
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(...FAINT)
-    doc.text('DATE', MARGIN, y)
-    doc.text('CUSTOMER', customerColX, y)
-    doc.text('ITEMS', itemsColX, y)
-    doc.text('AMOUNT', amountColX, y, { align: 'right' })
-    y += 6
-    doc.setDrawColor(...ACCENT)
+    doc.setFontSize(12)
+    doc.setTextColor(...INK)
+    doc.text(`${serial}. ${customerName(sale)}`, MARGIN, y, { maxWidth: nameMaxWidth })
+    doc.text(formatCurrencyPdf(sale.total_amount), page.width - MARGIN, y, { align: 'right' })
+    y += HEADER_LINE_H
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9.5)
+    doc.setTextColor(...MUTED)
+    doc.text(contactLine(sale), MARGIN + ENTRY_INDENT, y)
+    doc.text(
+      new Date(sale.sale_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      page.width - MARGIN,
+      y,
+      { align: 'right' },
+    )
+    y += META_LINE_H
+
+    if (showDispatch) {
+      doc.text(dispatchLine(sale), MARGIN + ENTRY_INDENT, y)
+      y += META_LINE_H
+    }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9.5)
+    doc.setTextColor(...INK)
+    for (const group of groups) {
+      const [firstLine, ...restLines] = group.lines
+      doc.text(`•  ${firstLine}`, MARGIN + ITEM_INDENT, y)
+      doc.text(formatCurrencyPdf(group.amount), page.width - MARGIN, y, { align: 'right' })
+      y += ITEM_LINE_H
+      for (const line of restLines) {
+        doc.text(line, MARGIN + ITEM_INDENT + 12, y)
+        y += ITEM_LINE_H
+      }
+    }
+
+    if (notes) {
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(9)
+      doc.setTextColor(...FAINT)
+      doc.text(`Note: ${notes}`, MARGIN + ENTRY_INDENT, y, {
+        maxWidth: page.width - MARGIN * 2 - ENTRY_INDENT,
+      })
+      y += NOTE_LINE_H
+    }
+
+    y += 8
+    doc.setDrawColor(...LINE)
     doc.setLineWidth(1)
     doc.line(MARGIN, y, page.width - MARGIN, y)
-    y += 14
+    y += ENTRY_TRAILING_GAP - 8
   }
 
   function drawSection(heading: string, rows: SaleListItem[]): number {
     ensureSpace(30)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(13)
+    doc.setFontSize(14)
     doc.setTextColor(...INK)
     doc.text(`${heading} (${rows.length})`, MARGIN, y)
+    y += 8
+    doc.setDrawColor(...ACCENT)
+    doc.setLineWidth(1.2)
+    doc.line(MARGIN, y, MARGIN + 28, y)
     y += 20
 
     if (rows.length === 0) {
@@ -101,29 +186,11 @@ export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInpu
       return 0
     }
 
-    drawTableHeader()
     let total = 0
-    for (const sale of rows) {
-      // Set the body font before measuring — splitTextToSize wraps using whatever font/size
-      // is currently set, and drawTableHeader() leaves bold 9pt active otherwise.
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9.5)
-      const lines = itemLines(doc, sale, itemsColWidth)
-      const rowHeight = Math.max(ROW_HEIGHT, lines.length * 12)
-      ensureSpace(rowHeight)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9.5)
-      doc.setTextColor(...INK)
-      doc.text(new Date(sale.sale_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), MARGIN, y)
-      doc.text(customerName(sale), customerColX, y, { maxWidth: itemsColX - customerColX - 8 })
-      doc.text(lines, itemsColX, y)
-      doc.text(formatCurrencyPdf(sale.total_amount), amountColX, y, { align: 'right' })
-
+    rows.forEach((sale, index) => {
+      drawEntry(sale, index + 1)
       total += sale.total_amount
-      y += rowHeight
-    }
-    y += 10
+    })
     return total
   }
 
@@ -131,7 +198,7 @@ export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInpu
   const unpaidSales = sales.filter((sale) => !sale.is_paid)
 
   const paidTotal = drawSection('Paid sales', paidSales)
-  y += 8
+  y += 12
   const unpaidTotal = drawSection('Unpaid sales', unpaidSales)
 
   // Statistics go last, on their own section — never interleaved with the sale listings.
