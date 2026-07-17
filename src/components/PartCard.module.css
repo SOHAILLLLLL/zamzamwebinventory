@@ -36,6 +36,29 @@
   bottom: 8px;
 }
 
+.selectCheckbox {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--panel-bg) 55%, transparent);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.selectCheckboxActive {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .body {
   padding: 12px 14px 14px;
   display: flex;

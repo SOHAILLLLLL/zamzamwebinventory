@@ -1,4 +1,4 @@
-import { Pencil, Share2, Trash2, X as XIcon } from 'lucide-react'
+import { Pencil, Printer, Share2, Trash2, X as XIcon } from 'lucide-react'
 import { useState } from 'react'
 import type { InventoryItemUpdate } from '../hooks/useUpdateInventoryItem'
 import { useUpdateInventoryItem } from '../hooks/useUpdateInventoryItem'
@@ -16,6 +16,7 @@ interface PartDetailModalProps {
   onClose: () => void
   onDelete: () => void
   onSaved: (updates: InventoryItemUpdate) => void
+  onPrintLabel: () => void
 }
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
@@ -51,7 +52,7 @@ function toFormState(item: InventoryListItem): EditFormState {
   }
 }
 
-export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSaved }: PartDetailModalProps) {
+export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSaved, onPrintLabel }: PartDetailModalProps) {
   const vehicle = item.donor_vehicle?.vehicle_application
   const part = item.part_catalog
   const [sharing, setSharing] = useState(false)
@@ -154,6 +155,9 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
               <button type="button" className={styles.shareButton} onClick={handleSharePdf} disabled={sharing}>
                 <Share2 size={14} />
                 {sharing ? 'Preparing…' : 'Share PDF'}
+              </button>
+              <button type="button" className={styles.iconButton} onClick={onPrintLabel} aria-label="Print label">
+                <Printer size={14} />
               </button>
               <button type="button" className={styles.editButton} onClick={handleStartEdit}>
                 <Pencil size={14} />
