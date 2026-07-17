@@ -32,7 +32,15 @@ const LABEL_WIDTH_MM = 105
 const LABEL_HEIGHT_MM = 148.5
 const LABELS_PER_PAGE = COLUMNS * ROWS
 const PADDING_MM = 8
-const MAX_ITEM_LINES = 6
+
+// Every item is always printed — no "+N more" truncation. Sales with a lot of lines get a
+// smaller font/tighter line height instead of losing items, tried largest-first.
+const ITEM_TEXT_TIERS = [
+  { fontSize: 9, lineHeight: 10 },
+  { fontSize: 8, lineHeight: 9 },
+  { fontSize: 7, lineHeight: 7.8 },
+  { fontSize: 6, lineHeight: 6.6 },
+]
 
 function shortSaleRef(id: string): string {
   return id.slice(0, 8).toUpperCase()
@@ -140,23 +148,36 @@ export async function buildSaleLabelSheetPdf(sales: SaleLabelData[]): Promise<Bl
     doc.text('ITEMS', contentX, y)
     y += 12
 
+    const totalY = cellY + LABEL_HEIGHT_MM - PADDING_MM - 4
+    const availableHeight = totalY - 12 - y
+
+    // Pick the largest tier whose wrapped line count still fits before the total footer —
+    // every item is printed regardless, this only controls how tight the text gets.
+    // Measure in the same weight it's rendered in (normal) — splitTextToSize wraps using
+    // whatever font is currently set, which was left bold by the "ITEMS" label above.
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(...INK)
-    const itemLines = sale.itemDescriptions.slice(0, MAX_ITEM_LINES)
-    const extraCount = sale.itemDescriptions.length - itemLines.length
-    for (const line of itemLines) {
-      const wrapped = doc.splitTextToSize(`• ${line}`, contentWidth) as string[]
-      doc.text(wrapped, contentX, y)
-      y += wrapped.length * 10
-    }
-    if (extraCount > 0) {
-      doc.setTextColor(...MUTED)
-      doc.text(`+ ${extraCount} more item${extraCount === 1 ? '' : 's'}`, contentX, y)
-      y += 10
+    let chosenTier = ITEM_TEXT_TIERS[ITEM_TEXT_TIERS.length - 1]
+    let wrappedLines: string[] = []
+    for (const tier of ITEM_TEXT_TIERS) {
+      doc.setFontSize(tier.fontSize)
+      const lines = sale.itemDescriptions.flatMap(
+        (description) => doc.splitTextToSize(`• ${description}`, contentWidth) as string[],
+      )
+      if (lines.length * tier.lineHeight <= availableHeight || tier === ITEM_TEXT_TIERS[ITEM_TEXT_TIERS.length - 1]) {
+        chosenTier = tier
+        wrappedLines = lines
+        break
+      }
     }
 
-    const totalY = cellY + LABEL_HEIGHT_MM - PADDING_MM - 4
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(chosenTier.fontSize)
+    doc.setTextColor(...INK)
+    for (const line of wrappedLines) {
+      doc.text(line, contentX, y)
+      y += chosenTier.lineHeight
+    }
+
     doc.setDrawColor(...ACCENT)
     doc.setLineWidth(0.6)
     doc.line(contentX, totalY - 12, contentRight, totalY - 12)

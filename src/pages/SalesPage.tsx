@@ -182,6 +182,7 @@ export function SalesPage() {
           keyFor={(sale) => sale.id}
           resetKey={`${debouncedSearch}-${paidFilter}-${dateFilter}-${sort}`}
           emptyMessage="No sales match your search or filters."
+          layout="list"
           renderItem={(sale) => (
             <SaleCard
               sale={sale}

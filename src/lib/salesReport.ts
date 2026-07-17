@@ -26,11 +26,14 @@ function customerName(sale: SaleListItem): string {
   return sale.customer?.name || 'Walk-in'
 }
 
-function itemsSummary(sale: SaleListItem): string {
-  const count = sale.sale_item.length
-  const first = sale.sale_item[0]?.description ?? ''
-  if (count <= 1) return first || '—'
-  return `${first} +${count - 1} more`
+// Every item is listed on its own wrapped line — no "+N more" truncation. The row's height
+// (see drawSection) grows to fit however many lines this produces.
+function itemLines(doc: jsPDF, sale: SaleListItem, maxWidth: number): string[] {
+  if (sale.sale_item.length === 0) return ['—']
+  return sale.sale_item.flatMap((item) => {
+    const label = `${item.description}${item.inventory_item?.sku ? ` (${item.inventory_item.sku})` : ''} × ${item.quantity}`
+    return doc.splitTextToSize(label, maxWidth) as string[]
+  })
 }
 
 export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInput): Promise<Blob> {
@@ -101,8 +104,12 @@ export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInpu
     drawTableHeader()
     let total = 0
     for (const sale of rows) {
-      const itemsLines = doc.splitTextToSize(itemsSummary(sale), itemsColWidth) as string[]
-      const rowHeight = Math.max(ROW_HEIGHT, itemsLines.length * 12)
+      // Set the body font before measuring — splitTextToSize wraps using whatever font/size
+      // is currently set, and drawTableHeader() leaves bold 9pt active otherwise.
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9.5)
+      const lines = itemLines(doc, sale, itemsColWidth)
+      const rowHeight = Math.max(ROW_HEIGHT, lines.length * 12)
       ensureSpace(rowHeight)
 
       doc.setFont('helvetica', 'normal')
@@ -110,7 +117,7 @@ export async function buildSalesReportPdf({ sales, rangeLabel }: SalesReportInpu
       doc.setTextColor(...INK)
       doc.text(new Date(sale.sale_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), MARGIN, y)
       doc.text(customerName(sale), customerColX, y, { maxWidth: itemsColX - customerColX - 8 })
-      doc.text(itemsLines, itemsColX, y)
+      doc.text(lines, itemsColX, y)
       doc.text(formatCurrencyPdf(sale.total_amount), amountColX, y, { align: 'right' })
 
       total += sale.total_amount

@@ -9,6 +9,8 @@ interface ChunkedGridProps<T> {
   resetKey: unknown
   emptyMessage: string
   chunkSize?: number
+  /** 'grid' (default) for photo cards; 'list' for full-width rows (e.g. dense ledger rows). */
+  layout?: 'grid' | 'list'
 }
 
 export function ChunkedGrid<T>({
@@ -18,6 +20,7 @@ export function ChunkedGrid<T>({
   resetKey,
   emptyMessage,
   chunkSize = 24,
+  layout = 'grid',
 }: ChunkedGridProps<T>) {
   const { visibleCount, sentinelRef } = useChunkedReveal(items.length, chunkSize, resetKey)
 
@@ -29,7 +32,7 @@ export function ChunkedGrid<T>({
 
   return (
     <>
-      <div className={styles.grid}>
+      <div className={layout === 'list' ? styles.list : styles.grid}>
         {visibleItems.map((item) => (
           <div key={keyFor(item)}>{renderItem(item)}</div>
         ))}

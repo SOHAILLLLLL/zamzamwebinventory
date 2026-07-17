@@ -11,6 +11,12 @@
   }
 }
 
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .sentinel {
   height: 1px;
 }
