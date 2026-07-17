@@ -5,21 +5,21 @@ import { getSignedPhotoUrls, type PhotoBucket } from './photos'
 
 // jsPDF's base14 fonts (helvetica) only cover WinAnsi/Latin-1 — the ₹ glyph from Intl's
 // currency formatter isn't in that set and renders as mojibake. Spell out "Rs." instead.
-function formatCurrencyPdf(amount: number): string {
+export function formatCurrencyPdf(amount: number): string {
   return `Rs. ${Math.round(amount).toLocaleString('en-IN')}`
 }
 
-type Rgb = [number, number, number]
+export type Rgb = [number, number, number]
 
 // Sampled from public/zamzam.png's stroke color so the accent rule matches the logo exactly.
-const ACCENT: Rgb = [222, 58, 59]
-const INK: Rgb = [23, 24, 28]
-const MUTED: Rgb = [102, 102, 111]
-const FAINT: Rgb = [147, 147, 156]
-const LINE: Rgb = [227, 227, 232]
+export const ACCENT: Rgb = [222, 58, 59]
+export const INK: Rgb = [23, 24, 28]
+export const MUTED: Rgb = [102, 102, 111]
+export const FAINT: Rgb = [147, 147, 156]
+export const LINE: Rgb = [227, 227, 232]
 const WATERMARK_GRAY: Rgb = [128, 128, 134]
 
-const STATUS_RGB: Record<BadgeTone, Rgb> = {
+export const STATUS_RGB: Record<BadgeTone, Rgb> = {
   success: [22, 163, 74],
   danger: [220, 38, 38],
   warning: [217, 119, 6],
@@ -27,7 +27,7 @@ const STATUS_RGB: Record<BadgeTone, Rgb> = {
   neutral: [102, 102, 111],
 }
 
-const STATUS_TINT: Record<BadgeTone, Rgb> = {
+export const STATUS_TINT: Record<BadgeTone, Rgb> = {
   success: [230, 247, 235],
   danger: [253, 232, 232],
   warning: [253, 240, 219],
@@ -35,27 +35,27 @@ const STATUS_TINT: Record<BadgeTone, Rgb> = {
   neutral: [240, 240, 243],
 }
 
-const MARGIN = 42
-const FOOTER_OFFSET = 46
-const BRAND_LINE = 'ZamZam Auto Parts — Narol, Ahmedabad'
+export const MARGIN = 42
+export const FOOTER_OFFSET = 46
+export const BRAND_LINE = 'ZamZam Auto Parts — Narol, Ahmedabad'
 
 interface PdfSection {
   heading: string
   rows: [string, string][]
 }
 
-interface LoadedImage {
+export interface LoadedImage {
   dataUrl: string
   width: number
   height: number
 }
 
-interface PageSize {
+export interface PageSize {
   width: number
   height: number
 }
 
-async function loadImageWithDimensions(url: string): Promise<LoadedImage | null> {
+export async function loadImageWithDimensions(url: string): Promise<LoadedImage | null> {
   try {
     const response = await fetch(url)
     if (!response.ok) return null
@@ -78,7 +78,7 @@ async function loadImageWithDimensions(url: string): Promise<LoadedImage | null>
   }
 }
 
-function fitWithinBox(width: number, height: number, maxWidth: number, maxHeight: number) {
+export function fitWithinBox(width: number, height: number, maxWidth: number, maxHeight: number) {
   const ratio = Math.min(maxWidth / width, maxHeight / height)
   return { width: width * ratio, height: height * ratio }
 }
@@ -89,13 +89,13 @@ function formatFromDataUrl(dataUrl: string): string {
 }
 
 let logoPromise: Promise<LoadedImage | null> | null = null
-function loadLogo() {
+export function loadLogo() {
   logoPromise ??= loadImageWithDimensions('/zamzam.png')
   return logoPromise
 }
 
 /** Large, low-opacity rotated wordmark behind the page content — printed and reused-photo protection. */
-function drawWatermark(doc: jsPDF, width: number, height: number) {
+export function drawWatermark(doc: jsPDF, width: number, height: number) {
   doc.saveGraphicsState()
   doc.setGState(new GState({ opacity: 0.06 }))
   doc.setFont('helvetica', 'bold')
@@ -109,7 +109,7 @@ const HEADER_TOP = 24
 const HEADER_LOGO_SIZE = 46
 
 /** Logo + accent rule at the top of every page. Returns the y where page content should start. */
-function drawHeader(doc: jsPDF, width: number, logo: LoadedImage | null): number {
+export function drawHeader(doc: jsPDF, width: number, logo: LoadedImage | null): number {
   if (logo) {
     const box = fitWithinBox(logo.width, logo.height, HEADER_LOGO_SIZE, HEADER_LOGO_SIZE)
     doc.addImage(logo.dataUrl, 'PNG', MARGIN, HEADER_TOP, box.width, box.height)
@@ -122,7 +122,7 @@ function drawHeader(doc: jsPDF, width: number, logo: LoadedImage | null): number
 }
 
 /** Hairline + address at the bottom of every page. Page numbers are stamped in a final pass. */
-function drawFooterChrome(doc: jsPDF, width: number, height: number) {
+export function drawFooterChrome(doc: jsPDF, width: number, height: number) {
   const y = height - FOOTER_OFFSET
   doc.setDrawColor(...LINE)
   doc.setLineWidth(1)
@@ -133,7 +133,7 @@ function drawFooterChrome(doc: jsPDF, width: number, height: number) {
   doc.text(BRAND_LINE, MARGIN, y + 16)
 }
 
-function drawStatusChip(doc: jsPDF, rightX: number, centerY: number, label: string, tone: BadgeTone) {
+export function drawStatusChip(doc: jsPDF, rightX: number, centerY: number, label: string, tone: BadgeTone) {
   const text = label.toUpperCase()
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8.5)
@@ -148,7 +148,7 @@ function drawStatusChip(doc: jsPDF, rightX: number, centerY: number, label: stri
 }
 
 /** Starts a fresh page (any orientation), draws its chrome, and returns the usable content box. */
-function openPage(
+export function openPage(
   doc: jsPDF,
   orientation: 'portrait' | 'landscape',
   logo: LoadedImage | null,
@@ -164,7 +164,7 @@ function openPage(
   return { width, height, contentTop, contentBottom: height - FOOTER_OFFSET }
 }
 
-function stampPageNumbers(doc: jsPDF, pageSizes: PageSize[]) {
+export function stampPageNumbers(doc: jsPDF, pageSizes: PageSize[]) {
   pageSizes.forEach((page, index) => {
     doc.setPage(index + 1)
     doc.setFont('helvetica', 'normal')

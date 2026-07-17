@@ -73,6 +73,74 @@ export interface Fitment {
   vehicle_application_id: string
 }
 
+export interface Customer {
+  id: string
+  name: string
+  mobile: string | null
+  state: string | null
+  city: string | null
+  address: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface Sale {
+  id: string
+  customer_id: string | null
+  sale_date: string
+  is_paid: boolean
+  is_carrying: boolean
+  transport_company: string | null
+  lr_number: string | null
+  notes: string | null
+  total_amount: number
+  is_cancelled: boolean
+  deleted_at: string | null
+  is_delivered: boolean
+  is_ignored: boolean
+  remind_after: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export interface SaleItem {
+  id: string
+  sale_id: string
+  inventory_item_id: string | null
+  description: string
+  quantity: number
+  unit_price: number
+  notes: string | null
+  created_at: string
+}
+
+export interface Replacement {
+  id: string
+  sale_id: string
+  customer_id: string | null
+  customer_name: string
+  customer_mobile: string | null
+  item_name: string
+  item_code: string | null
+  reason: string
+  status: string
+  courier_company: string | null
+  lr_number: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type CustomerSummary = Pick<Customer, 'id' | 'name' | 'mobile' | 'state' | 'city' | 'address'>
+
+export interface SaleItemListItem extends SaleItem {
+  inventory_item: Pick<InventoryItem, 'id' | 'sku' | 'item_name' | 'shelf_location' | 'status'> | null
+}
+
+export interface SaleListItem extends Sale {
+  customer: CustomerSummary | null
+  sale_item: SaleItemListItem[]
+}
+
 export type VehicleApplicationSummary = Pick<
   VehicleApplication,
   'id' | 'make' | 'model' | 'variant' | 'generation_code' | 'year_from' | 'year_to' | 'body_style'
