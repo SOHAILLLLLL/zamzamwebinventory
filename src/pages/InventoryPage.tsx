@@ -1,4 +1,4 @@
-import { ArrowUpDown, Plus } from 'lucide-react'
+import { ArrowUpDown, Plus, Printer, Tags, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AddPartWizard } from '../components/AddPartWizard'
 import { CarCard } from '../components/CarCard'
@@ -9,6 +9,7 @@ import { FloatingTabs, type InventoryTab } from '../components/FloatingTabs'
 import { PartCard } from '../components/PartCard'
 import { PartDetailModal } from '../components/PartDetailModal'
 import { type PartSort, PartsFilterModal } from '../components/PartsFilterModal'
+import { PrintLabelsModal } from '../components/PrintLabelsModal'
 import { SearchBar } from '../components/SearchBar'
 import { SortMenu } from '../components/SortMenu'
 import { StatusFilterChips } from '../components/StatusFilterChips'
@@ -90,6 +91,9 @@ export function InventoryPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [carStatusFilter, setCarStatusFilter] = useState<string | null>(null)
   const [addPartOpen, setAddPartOpen] = useState(false)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [printLabelsItems, setPrintLabelsItems] = useState<InventoryListItem[] | null>(null)
 
   const partsQuery = useInventoryItems()
   const carsQuery = useDonorVehicles()
@@ -202,6 +206,31 @@ export function InventoryPage() {
     setSelectedCar(null)
   }
 
+  function toggleSelectionMode() {
+    setSelectionMode((prev) => !prev)
+    setSelectedIds(new Set())
+  }
+
+  function toggleItemSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function handleSelectAllFiltered() {
+    setSelectedIds(new Set(filteredSortedParts.map((item) => item.id)))
+  }
+
+  function handlePrintSelected() {
+    // Resolve against the full unfiltered list, not filteredSortedParts — a selection made
+    // before narrowing the search/filter must still print in full, not silently shrink.
+    const items = (partsQuery.data ?? []).filter((item) => selectedIds.has(item.id))
+    if (items.length > 0) setPrintLabelsItems(items)
+  }
+
   return (
     <div className={styles.page}>
       <FloatingTabs active={tab} onChange={setTab} />
@@ -214,20 +243,30 @@ export function InventoryPage() {
           examples={tab === 'parts' ? searchExamples : undefined}
         />
         {tab === 'parts' ? (
-          <button
-            type="button"
-            className={`${styles.sortButton} ${
-              partVehicleIds.length > 0 || partTypeFilter.length > 0 ? styles.sortButtonActive : ''
-            }`}
-            onClick={() => setFilterModalOpen(true)}
-            aria-haspopup="dialog"
-          >
-            <ArrowUpDown size={15} />
-            Sort
-            {partVehicleIds.length + partTypeFilter.length > 0 && (
-              <span className={styles.sortButtonBadge}>{partVehicleIds.length + partTypeFilter.length}</span>
-            )}
-          </button>
+          <>
+            <button
+              type="button"
+              className={`${styles.sortButton} ${
+                partVehicleIds.length > 0 || partTypeFilter.length > 0 ? styles.sortButtonActive : ''
+              }`}
+              onClick={() => setFilterModalOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <ArrowUpDown size={15} />
+              Sort
+              {partVehicleIds.length + partTypeFilter.length > 0 && (
+                <span className={styles.sortButtonBadge}>{partVehicleIds.length + partTypeFilter.length}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`${styles.sortButton} ${selectionMode ? styles.sortButtonActive : ''}`}
+              onClick={toggleSelectionMode}
+            >
+              {selectionMode ? <X size={15} /> : <Tags size={15} />}
+              {selectionMode ? 'Cancel' : 'Select'}
+            </button>
+          </>
         ) : (
           <SortMenu value={carSort} onChange={setCarSort} options={carSortOptions} />
         )}
@@ -256,6 +295,9 @@ export function InventoryPage() {
                   item={item}
                   onOpen={() => setSelectedPart(item)}
                   onDelete={() => setDeletePartTarget(item)}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(item.id)}
+                  onToggleSelect={() => toggleItemSelected(item.id)}
                 />
               )}
             />
@@ -310,6 +352,7 @@ export function InventoryPage() {
           onClose={() => setSelectedPart(null)}
           onDelete={() => setDeletePartTarget(selectedPart)}
           onSaved={(updates) => setSelectedPart((prev) => (prev ? { ...prev, ...updates } : prev))}
+          onPrintLabel={() => setPrintLabelsItems([selectedPart])}
         />
       )}
 
@@ -353,7 +396,7 @@ export function InventoryPage() {
         />
       )}
 
-      {tab === 'parts' && (
+      {tab === 'parts' && !selectionMode && (
         <button
           type="button"
           className={styles.addPartFab}
@@ -364,7 +407,27 @@ export function InventoryPage() {
         </button>
       )}
 
+      {tab === 'parts' && selectionMode && (
+        <div className={styles.selectionBar}>
+          <span className={styles.selectionCount}>{selectedIds.size} selected</span>
+          <button type="button" className={styles.selectionAction} onClick={handleSelectAllFiltered}>
+            Select all ({filteredSortedParts.length})
+          </button>
+          <button
+            type="button"
+            className={styles.selectionPrimary}
+            onClick={handlePrintSelected}
+            disabled={selectedIds.size === 0}
+          >
+            <Printer size={15} />
+            Print labels
+          </button>
+        </div>
+      )}
+
       {addPartOpen && <AddPartWizard onClose={() => setAddPartOpen(false)} />}
+
+      {printLabelsItems && <PrintLabelsModal items={printLabelsItems} onClose={() => setPrintLabelsItems(null)} />}
     </div>
   )
 }
