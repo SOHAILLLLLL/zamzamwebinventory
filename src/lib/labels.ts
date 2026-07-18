@@ -26,6 +26,14 @@ const CELL_PADDING_MM = 2.5
 const QR_SIZE_MM = 22
 const TEXT_GAP_MM = 2
 
+// Every item is always printed with its full SKU/location text, never clipped or
+// silently dropped — but jsPDF doesn't clip text to a box, so anything that wraps
+// more than expected bleeds straight onto the label below. SKU tries largest-first;
+// location's line count is computed from actual remaining space, not guessed.
+const SKU_FONT_SIZE_TIERS = [9, 8, 7, 6.5]
+const LOCATION_FONT_SIZE = 7.5
+const SKU_LOCATION_GAP_MM = 1
+
 // 200px is plenty for a QR printed at 22mm — modules are flat black/white, not
 // photographic detail, so scan quality doesn't need a large raster.
 async function qrDataUrl(text: string): Promise<string> {
@@ -68,18 +76,42 @@ export async function buildLabelSheetPdf(items: LabelData[], options: LabelSheet
     const textX = qrX + QR_SIZE_MM + TEXT_GAP_MM
     const textMaxWidth = cellX + LABEL_WIDTH_MM - CELL_PADDING_MM - textX
     let textY = cellY + CELL_PADDING_MM + 4
+    // The hard bottom edge of this cell — nothing may be drawn past this, or it lands
+    // on the label in the row below.
+    const bottomLimitMm = cellY + LABEL_HEIGHT_MM - CELL_PADDING_MM
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
     doc.setTextColor(23, 24, 28)
-    doc.text(item.sku, textX, textY, { maxWidth: textMaxWidth })
-    textY += 5
+    let skuFontSize = SKU_FONT_SIZE_TIERS[SKU_FONT_SIZE_TIERS.length - 1]
+    for (const size of SKU_FONT_SIZE_TIERS) {
+      doc.setFontSize(size)
+      if (doc.getTextWidth(item.sku) <= textMaxWidth || size === SKU_FONT_SIZE_TIERS[SKU_FONT_SIZE_TIERS.length - 1]) {
+        skuFontSize = size
+        break
+      }
+    }
+    doc.setFontSize(skuFontSize)
+    // Real SKUs always fit on one line at the largest tier — this still measures the
+    // actual wrap so textY can never desync from what's really drawn, even for a
+    // non-conforming/legacy SKU that doesn't fit even at the smallest tier.
+    const skuLines = doc.splitTextToSize(item.sku, textMaxWidth) as string[]
+    doc.text(skuLines, textX, textY)
+    // getLineHeight() is always in points regardless of the doc's unit — divide by
+    // scaleFactor (~2.8346 for 'mm') to get millimeters, the same conversion jsPDF's
+    // own internals use.
+    const skuLineHeightMm = doc.getLineHeight() / doc.internal.scaleFactor
+    textY += skuLines.length * skuLineHeightMm + SKU_LOCATION_GAP_MM
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7.5)
+    doc.setFontSize(LOCATION_FONT_SIZE)
     doc.setTextColor(102, 102, 111)
-    const locationLines = doc.splitTextToSize(item.shelfLocation || '—', textMaxWidth) as string[]
-    doc.text(locationLines.slice(0, 3), textX, textY)
+    const locationLineHeightMm = doc.getLineHeight() / doc.internal.scaleFactor
+    const maxLocationLines = Math.max(0, Math.floor((bottomLimitMm - textY) / locationLineHeightMm))
+    const locationLines = (doc.splitTextToSize(item.shelfLocation || '—', textMaxWidth) as string[]).slice(
+      0,
+      maxLocationLines,
+    )
+    if (locationLines.length > 0) doc.text(locationLines, textX, textY)
   }
 
   return doc.output('blob')
