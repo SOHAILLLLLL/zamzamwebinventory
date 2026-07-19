@@ -27,6 +27,7 @@ export function useUpdateInventoryItem() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-item'] })
     },
   })
 }

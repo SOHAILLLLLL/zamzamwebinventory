@@ -30,6 +30,7 @@ export function PrintLabelsModal({ items, onClose }: PrintLabelsModalProps) {
       const labelData: LabelData[] = items.map((item) => ({
         id: item.id,
         sku: item.sku,
+        qrValue: `${window.location.origin}/items/${encodeURIComponent(item.sku)}`,
         shelfLocation: item.shelf_location,
       }))
       const blob = await buildLabelSheetPdf(labelData, {
