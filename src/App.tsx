@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth'
 import { InventoryPage } from './pages/InventoryPage'
 import { ItemDetailPage } from './pages/ItemDetailPage'
 import { LoginPage } from './pages/LoginPage'
+import { ReplacementsPage } from './pages/ReplacementsPage'
 import { SalesPage } from './pages/SalesPage'
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Route path="/" element={<InventoryPage />} />
           <Route path="/items/:sku" element={<ItemDetailPage />} />
           <Route path="/sales" element={<SalesPage />} />
+          <Route path="/replacements" element={<ReplacementsPage />} />
         </Routes>
       </main>
     </>

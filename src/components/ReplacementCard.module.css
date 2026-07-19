@@ -1,0 +1,156 @@
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px 14px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.customerName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.customerIcon {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.customerMobile {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.date {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+
+.itemIcon {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.itemName {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.itemCode {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.reason {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.reasonLabel {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.dispatchLine {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.secondaryAction,
+.completeAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform 160ms var(--ease-out), background 150ms ease, border-color 150ms ease;
+}
+
+.secondaryAction {
+  background: var(--warning-bg);
+  border-color: transparent;
+  color: var(--warning);
+}
+
+.secondaryAction:hover {
+  border-color: var(--warning);
+}
+
+.completeAction {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.completeAction:hover {
+  border-color: var(--success);
+}
+
+.secondaryAction:active,
+.completeAction:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .secondaryAction,
+  .completeAction {
+    transition: none;
+  }
+}

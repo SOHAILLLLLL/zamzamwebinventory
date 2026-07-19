@@ -11,6 +11,12 @@ export function statusTone(status: string): BadgeTone {
   return 'neutral'
 }
 
+export function replacementStatusTone(status: string): BadgeTone {
+  if (status === 'in_transit') return 'warning'
+  if (status === 'completed') return 'success'
+  return 'info' // informing_customer
+}
+
 export function formatStatus(status: string): string {
   return status
     .split('_')
