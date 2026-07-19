@@ -1,13 +1,14 @@
-import { MoreVertical, Share2, Trash2 } from 'lucide-react'
+import { MapPin, MoreVertical, Share2, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import styles from './CardMenu.module.css'
 
 interface CardMenuProps {
   onDelete: () => void
   onSharePdf: () => Promise<void>
+  onUpdateLocation?: () => void
 }
 
-export function CardMenu({ onDelete, onSharePdf }: CardMenuProps) {
+export function CardMenu({ onDelete, onSharePdf, onUpdateLocation }: CardMenuProps) {
   const [open, setOpen] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState(false)
@@ -68,6 +69,20 @@ export function CardMenu({ onDelete, onSharePdf }: CardMenuProps) {
             {sharing ? 'Preparing…' : 'Share PDF'}
           </button>
           {shareError && <p className={styles.menuError}>Couldn't generate PDF</p>}
+          {onUpdateLocation && (
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.menuItem}
+              onClick={() => {
+                setOpen(false)
+                onUpdateLocation()
+              }}
+            >
+              <MapPin size={14} />
+              Update location
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

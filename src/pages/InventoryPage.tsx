@@ -1,5 +1,6 @@
 import { ArrowUpDown, Plus, Printer, Tags, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AddPartWizard } from '../components/AddPartWizard'
 import { CarCard } from '../components/CarCard'
 import { CarDetailModal } from '../components/CarDetailModal'
@@ -7,12 +8,12 @@ import { ChunkedGrid } from '../components/ChunkedGrid'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { FloatingTabs, type InventoryTab } from '../components/FloatingTabs'
 import { PartCard } from '../components/PartCard'
-import { PartDetailModal } from '../components/PartDetailModal'
 import { type PartSort, PartsFilterModal } from '../components/PartsFilterModal'
 import { PrintLabelsModal } from '../components/PrintLabelsModal'
 import { SearchBar } from '../components/SearchBar'
 import { SortMenu } from '../components/SortMenu'
 import { StatusFilterChips } from '../components/StatusFilterChips'
+import { UpdateLocationModal } from '../components/UpdateLocationModal'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useDeleteDonorVehicle } from '../hooks/useDeleteDonorVehicle'
 import { DeleteBlockedError, useDeleteInventoryItem } from '../hooks/useDeleteInventoryItem'
@@ -82,10 +83,10 @@ export function InventoryPage() {
   const [carSort, setCarSort] = useState<CarSort>('newest')
   const debouncedSearch = useDebouncedValue(search)
 
-  const [selectedPart, setSelectedPart] = useState<InventoryListItem | null>(null)
   const [selectedCar, setSelectedCar] = useState<DonorVehicleListItem | null>(null)
   const [deletePartTarget, setDeletePartTarget] = useState<InventoryListItem | null>(null)
   const [deleteCarTarget, setDeleteCarTarget] = useState<DonorVehicleListItem | null>(null)
+  const [locationEditTarget, setLocationEditTarget] = useState<InventoryListItem | null>(null)
   const [partVehicleIds, setPartVehicleIds] = useState<string[]>([])
   const [partTypeFilter, setPartTypeFilter] = useState<string[]>([])
   const [filterModalOpen, setFilterModalOpen] = useState(false)
@@ -95,6 +96,7 @@ export function InventoryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [printLabelsItems, setPrintLabelsItems] = useState<InventoryListItem[] | null>(null)
 
+  const navigate = useNavigate()
   const partsQuery = useInventoryItems()
   const carsQuery = useDonorVehicles()
   const deleteInventoryItem = useDeleteInventoryItem()
@@ -135,12 +137,6 @@ export function InventoryPage() {
     const statuses = new Set((carsQuery.data ?? []).map((vehicle) => vehicle.status))
     return [...statuses].sort((a, b) => a.localeCompare(b))
   }, [carsQuery.data])
-
-  const partStatusOptions = useMemo(() => {
-    const statuses = new Set((partsQuery.data ?? []).map((item) => item.status))
-    if (selectedPart) statuses.add(selectedPart.status)
-    return [...statuses].sort((a, b) => a.localeCompare(b))
-  }, [partsQuery.data, selectedPart])
 
   const filteredSortedParts = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase()
@@ -196,7 +192,6 @@ export function InventoryPage() {
     if (!deletePartTarget) return
     await deleteInventoryItem.mutateAsync({ id: deletePartTarget.id, photos: deletePartTarget.photos })
     setDeletePartTarget(null)
-    setSelectedPart(null)
   }
 
   async function confirmDeleteCar() {
@@ -293,8 +288,9 @@ export function InventoryPage() {
               renderItem={(item) => (
                 <PartCard
                   item={item}
-                  onOpen={() => setSelectedPart(item)}
+                  onOpen={() => navigate(`/items/${item.sku}`)}
                   onDelete={() => setDeletePartTarget(item)}
+                  onUpdateLocation={() => setLocationEditTarget(item)}
                   selectionMode={selectionMode}
                   selected={selectedIds.has(item.id)}
                   onToggleSelect={() => toggleItemSelected(item.id)}
@@ -345,15 +341,8 @@ export function InventoryPage() {
         />
       )}
 
-      {selectedPart && (
-        <PartDetailModal
-          item={selectedPart}
-          statusOptions={partStatusOptions}
-          onClose={() => setSelectedPart(null)}
-          onDelete={() => setDeletePartTarget(selectedPart)}
-          onSaved={(updates) => setSelectedPart((prev) => (prev ? { ...prev, ...updates } : prev))}
-          onPrintLabel={() => setPrintLabelsItems([selectedPart])}
-        />
+      {locationEditTarget && (
+        <UpdateLocationModal item={locationEditTarget} onClose={() => setLocationEditTarget(null)} />
       )}
 
       {selectedCar && (

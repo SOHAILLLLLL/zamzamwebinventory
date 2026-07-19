@@ -10,12 +10,21 @@ interface PartCardProps {
   item: InventoryListItem
   onOpen: () => void
   onDelete: () => void
+  onUpdateLocation: () => void
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
 }
 
-export function PartCard({ item, onOpen, onDelete, selectionMode, selected, onToggleSelect }: PartCardProps) {
+export function PartCard({
+  item,
+  onOpen,
+  onDelete,
+  onUpdateLocation,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}: PartCardProps) {
   const vehicle = item.donor_vehicle?.vehicle_application
   const vehicleLine = [vehicle?.make, vehicle?.generation_code].filter(Boolean).join(' · ')
   const partNumber = item.part_number || item.part_catalog?.primary_oem_number || item.sku
@@ -40,7 +49,7 @@ export function PartCard({ item, onOpen, onDelete, selectionMode, selected, onTo
             {selected && <CheckCircle2 size={16} strokeWidth={2.5} />}
           </span>
         ) : (
-          <CardMenu onDelete={onDelete} onSharePdf={handleSharePdf} />
+          <CardMenu onDelete={onDelete} onSharePdf={handleSharePdf} onUpdateLocation={onUpdateLocation} />
         )}
         <div className={styles.statusOverlay}>
           <Badge tone={statusTone(item.status)}>{formatStatus(item.status)}</Badge>

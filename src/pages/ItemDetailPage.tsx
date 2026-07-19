@@ -1,23 +1,20 @@
-import { Pencil, Printer, Share2, Trash2, X as XIcon } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Pencil, Printer, Share2, Trash2, X as XIcon } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Badge, formatStatus, statusTone } from '../components/Badge'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { DetailRow, DetailSection } from '../components/DetailRow'
+import detailStyles from '../components/DetailModal.module.css'
+import { PhotoGallery } from '../components/PhotoGallery'
+import { PrintLabelsModal } from '../components/PrintLabelsModal'
+import { DeleteBlockedError, useDeleteInventoryItem } from '../hooks/useDeleteInventoryItem'
+import { useInventoryItemBySku } from '../hooks/useInventoryItemBySku'
+import { useInventoryItems } from '../hooks/useInventoryItems'
 import type { InventoryItemUpdate } from '../hooks/useUpdateInventoryItem'
 import { useUpdateInventoryItem } from '../hooks/useUpdateInventoryItem'
 import { buildPartPdf, sharePdf } from '../lib/pdf'
 import type { InventoryListItem } from '../types/db'
-import { Badge, formatStatus, statusTone } from './Badge'
-import { DetailRow, DetailSection } from './DetailRow'
-import { Modal } from './Modal'
-import { PhotoGallery } from './PhotoGallery'
-import styles from './DetailModal.module.css'
-
-interface PartDetailModalProps {
-  item: InventoryListItem
-  statusOptions: string[]
-  onClose: () => void
-  onDelete: () => void
-  onSaved: (updates: InventoryItemUpdate) => void
-  onPrintLabel: () => void
-}
+import styles from './ItemDetailPage.module.css'
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
@@ -52,17 +49,35 @@ function toFormState(item: InventoryListItem): EditFormState {
   }
 }
 
-export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSaved, onPrintLabel }: PartDetailModalProps) {
-  const vehicle = item.donor_vehicle?.vehicle_application
-  const part = item.part_catalog
+export function ItemDetailPage() {
+  const { sku } = useParams<{ sku: string }>()
+  const navigate = useNavigate()
+  const itemQuery = useInventoryItemBySku(sku)
+  const item = itemQuery.data
+
+  // Same-shape fallback to InventoryPage's status-options derivation — dedupes against
+  // an already-warm ['inventory-items'] cache when arriving from a card click, and is
+  // still correct (just one extra fetch) on a fresh/direct/QR-scanned visit.
+  const allItemsQuery = useInventoryItems()
+  const statusOptions = useMemo(() => {
+    const statuses = new Set((allItemsQuery.data ?? []).map((listItem) => listItem.status))
+    if (item) statuses.add(item.status)
+    return [...statuses].sort((a, b) => a.localeCompare(b))
+  }, [allItemsQuery.data, item])
+
   const [sharing, setSharing] = useState(false)
   const [shareError, setShareError] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [form, setForm] = useState<EditFormState>(() => toFormState(item))
+  const [form, setForm] = useState<EditFormState | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [printOpen, setPrintOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
   const updateInventoryItem = useUpdateInventoryItem()
+  const deleteInventoryItem = useDeleteInventoryItem()
 
   async function handleSharePdf() {
+    if (!item) return
     setSharing(true)
     setShareError(false)
     try {
@@ -76,6 +91,7 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
   }
 
   function handleStartEdit() {
+    if (!item) return
     setForm(toFormState(item))
     setFormError(null)
     setIsEditing(true)
@@ -88,6 +104,7 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
   }
 
   async function handleSave() {
+    if (!item || !form) return
     const name = form.item_name.trim()
     if (!name) {
       setFormError('Item name is required.')
@@ -120,30 +137,84 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
 
     try {
       await updateInventoryItem.mutateAsync({ id: item.id, updates })
-      onSaved(updates)
       setIsEditing(false)
     } catch {
       setFormError("Couldn't save changes. Try again.")
     }
   }
 
+  async function handleConfirmDelete() {
+    if (!item) return
+    await deleteInventoryItem.mutateAsync({ id: item.id, photos: item.photos })
+    navigate('/')
+  }
+
+  if (itemQuery.isLoading) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.status}>Loading item…</p>
+      </div>
+    )
+  }
+
+  if (itemQuery.isError) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.statusError}>Couldn't load this item. Try refreshing.</p>
+        <Link to="/" className={styles.backLink}>
+          <ArrowLeft size={15} />
+          Back to inventory
+        </Link>
+      </div>
+    )
+  }
+
+  if (!item) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.status}>Item not found.</p>
+        <Link to="/" className={styles.backLink}>
+          <ArrowLeft size={15} />
+          Back to inventory
+        </Link>
+      </div>
+    )
+  }
+
+  const vehicle = item.donor_vehicle?.vehicle_application
+  const part = item.part_catalog
+
   return (
-    <Modal title={item.item_name} onClose={onClose}>
+    <div className={styles.page}>
+      <button type="button" className={styles.backButton} onClick={() => navigate('/')}>
+        <ArrowLeft size={15} />
+        Back to inventory
+      </button>
+
       <PhotoGallery bucket="part-photos" paths={item.photos} alt={item.item_name} />
 
-      <div className={styles.topRow}>
-        <Badge tone={statusTone(item.status)}>{formatStatus(item.status)}</Badge>
-        {item.condition_grade && <Badge tone="neutral">Grade {item.condition_grade}</Badge>}
-        <div className={styles.actions}>
+      <div className={styles.header}>
+        <div className={styles.headerText}>
+          <h1 className={styles.title}>{item.item_name}</h1>
+          <span className={styles.sku}>{item.sku}</span>
+        </div>
+        <div className={styles.badgeRow}>
+          <Badge tone={statusTone(item.status)}>{formatStatus(item.status)}</Badge>
+          {item.condition_grade && <Badge tone="neutral">Grade {item.condition_grade}</Badge>}
+        </div>
+      </div>
+
+      <div className={detailStyles.topRow}>
+        <div className={detailStyles.actions}>
           {isEditing ? (
             <>
-              <button type="button" className={styles.cancelButton} onClick={handleCancelEdit}>
+              <button type="button" className={detailStyles.cancelButton} onClick={handleCancelEdit}>
                 <XIcon size={14} />
                 Cancel
               </button>
               <button
                 type="button"
-                className={styles.saveButton}
+                className={detailStyles.saveButton}
                 onClick={handleSave}
                 disabled={updateInventoryItem.isPending}
               >
@@ -152,18 +223,23 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
             </>
           ) : (
             <>
-              <button type="button" className={styles.shareButton} onClick={handleSharePdf} disabled={sharing}>
+              <button type="button" className={detailStyles.shareButton} onClick={handleSharePdf} disabled={sharing}>
                 <Share2 size={14} />
                 {sharing ? 'Preparing…' : 'Share PDF'}
               </button>
-              <button type="button" className={styles.iconButton} onClick={onPrintLabel} aria-label="Print label">
+              <button
+                type="button"
+                className={detailStyles.iconButton}
+                onClick={() => setPrintOpen(true)}
+                aria-label="Print label"
+              >
                 <Printer size={14} />
               </button>
-              <button type="button" className={styles.editButton} onClick={handleStartEdit}>
+              <button type="button" className={detailStyles.editButton} onClick={handleStartEdit}>
                 <Pencil size={14} />
                 Edit
               </button>
-              <button type="button" className={styles.deleteButton} onClick={onDelete}>
+              <button type="button" className={detailStyles.deleteButton} onClick={() => setDeleteOpen(true)}>
                 <Trash2 size={14} />
                 Delete
               </button>
@@ -171,27 +247,27 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
           )}
         </div>
       </div>
-      {shareError && <p className={styles.shareErrorText}>Couldn't generate PDF. Try again.</p>}
-      {formError && <p className={styles.shareErrorText}>{formError}</p>}
+      {shareError && <p className={detailStyles.shareErrorText}>Couldn't generate PDF. Try again.</p>}
+      {formError && <p className={detailStyles.shareErrorText}>{formError}</p>}
 
-      {isEditing ? (
+      {isEditing && form ? (
         <>
           <DetailSection title="Part">
             <DetailRow label="SKU" value={item.sku} />
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Item name</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Item name</span>
               <input
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.item_name}
-                onChange={(event) => setForm((prev) => ({ ...prev, item_name: event.target.value }))}
+                onChange={(event) => setForm((prev) => (prev ? { ...prev, item_name: event.target.value } : prev))}
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Part number</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Part number</span>
               <input
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.part_number}
-                onChange={(event) => setForm((prev) => ({ ...prev, part_number: event.target.value }))}
+                onChange={(event) => setForm((prev) => (prev ? { ...prev, part_number: event.target.value } : prev))}
                 placeholder={part?.primary_oem_number || 'Not set'}
               />
             </label>
@@ -210,22 +286,24 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
           </DetailSection>
 
           <DetailSection title="Condition & testing">
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Condition grade</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Condition grade</span>
               <input
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.condition_grade}
-                onChange={(event) => setForm((prev) => ({ ...prev, condition_grade: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => (prev ? { ...prev, condition_grade: event.target.value } : prev))
+                }
                 placeholder="e.g. A, B, C"
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Tested</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Tested</span>
               <select
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.tested}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, tested: event.target.value as EditFormState['tested'] }))
+                  setForm((prev) => (prev ? { ...prev, tested: event.target.value as EditFormState['tested'] } : prev))
                 }
               >
                 <option value="unknown">Unknown</option>
@@ -233,51 +311,55 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
                 <option value="no">No</option>
               </select>
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Test notes</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Test notes</span>
               <textarea
-                className={styles.fieldTextarea}
+                className={detailStyles.fieldTextarea}
                 value={form.test_notes}
-                onChange={(event) => setForm((prev) => ({ ...prev, test_notes: event.target.value }))}
+                onChange={(event) => setForm((prev) => (prev ? { ...prev, test_notes: event.target.value } : prev))}
                 rows={3}
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Paired set</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Paired set</span>
               <input
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.paired_set_ref}
-                onChange={(event) => setForm((prev) => ({ ...prev, paired_set_ref: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => (prev ? { ...prev, paired_set_ref: event.target.value } : prev))
+                }
               />
             </label>
           </DetailSection>
 
           <DetailSection title="Inventory">
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Shelf location</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Shelf location</span>
               <input
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.shelf_location}
-                onChange={(event) => setForm((prev) => ({ ...prev, shelf_location: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => (prev ? { ...prev, shelf_location: event.target.value } : prev))
+                }
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Price (₹)</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Price (₹)</span>
               <input
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 type="number"
                 min="0"
                 inputMode="decimal"
                 value={form.price}
-                onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
+                onChange={(event) => setForm((prev) => (prev ? { ...prev, price: event.target.value } : prev))}
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Status</span>
+            <label className={detailStyles.field}>
+              <span className={detailStyles.fieldLabel}>Status</span>
               <select
-                className={styles.fieldInput}
+                className={detailStyles.fieldInput}
                 value={form.status}
-                onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+                onChange={(event) => setForm((prev) => (prev ? { ...prev, status: event.target.value } : prev))}
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
@@ -321,6 +403,22 @@ export function PartDetailModal({ item, statusOptions, onClose, onDelete, onSave
           </DetailSection>
         </>
       )}
-    </Modal>
+
+      {printOpen && <PrintLabelsModal items={[item]} onClose={() => setPrintOpen(false)} />}
+
+      {deleteOpen && (
+        <ConfirmDialog
+          title="Delete this part?"
+          description={`"${item.item_name}" and its photos will be permanently removed. This can't be undone.`}
+          busy={deleteInventoryItem.isPending}
+          errorMessage={deleteInventoryItem.error instanceof DeleteBlockedError ? deleteInventoryItem.error.message : null}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => {
+            setDeleteOpen(false)
+            deleteInventoryItem.reset()
+          }}
+        />
+      )}
+    </div>
   )
 }

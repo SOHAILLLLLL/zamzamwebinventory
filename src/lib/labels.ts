@@ -4,6 +4,10 @@ import QRCode from 'qrcode'
 export interface LabelData {
   id: string
   sku: string
+  // What the QR code actually encodes — an absolute item URL, not the bare SKU. Kept
+  // separate from `sku` because the printed text under the QR must stay the short,
+  // human-readable code even though the scannable payload is now a full link.
+  qrValue: string
   shelfLocation: string | null
 }
 
@@ -45,13 +49,13 @@ export async function buildLabelSheetPdf(items: LabelData[], options: LabelSheet
   const offsetY = options.offsetYMm ?? 0
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
-  // One QR render per unique SKU — bulk print of the same item list never repeats work.
+  // One QR render per unique payload — bulk print of the same item list never repeats work.
   const qrCache = new Map<string, string>()
-  async function getQr(sku: string): Promise<string> {
-    let dataUrl = qrCache.get(sku)
+  async function getQr(value: string): Promise<string> {
+    let dataUrl = qrCache.get(value)
     if (!dataUrl) {
-      dataUrl = await qrDataUrl(sku)
-      qrCache.set(sku, dataUrl)
+      dataUrl = await qrDataUrl(value)
+      qrCache.set(value, dataUrl)
     }
     return dataUrl
   }
@@ -66,7 +70,7 @@ export async function buildLabelSheetPdf(items: LabelData[], options: LabelSheet
     const cellX = offsetX + col * LABEL_WIDTH_MM
     const cellY = offsetY + row * LABEL_HEIGHT_MM
 
-    const qr = await getQr(item.sku)
+    const qr = await getQr(item.qrValue)
     const qrX = cellX + CELL_PADDING_MM
     const qrY = cellY + (LABEL_HEIGHT_MM - QR_SIZE_MM) / 2
     // jsPDF stores addImage data uncompressed by default — for a page full of raster
