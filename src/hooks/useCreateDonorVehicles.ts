@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { buildDonorVehicleTagCodes, nextDonorVehicleTagNumber } from '../lib/donorVehicleTagCode'
 import { uploadPhotos } from '../lib/photos'
 import { supabase } from '../lib/supabase'
 import type { DonorVehicleListItem } from '../types/db'
@@ -23,29 +24,6 @@ export interface CreateDonorVehiclesInput {
 const VEHICLE_APPLICATION_SELECT =
   '*, vehicle_application:vehicle_application_id ( id, make, model, variant, generation_code, year_from, year_to, body_style )'
 
-// tag_code has no DB-side default (unlike inventory_item.sku) — the mobile app's own
-// convention is client-generated "DV-0001", "DV-0002", ... (zero-padded, sequential).
-// We mirror that here since this repo has no migrations to confirm a different scheme.
-//
-// Numeric max is computed client-side rather than via `order by tag_code desc limit 1` —
-// text ordering only matches numeric ordering when every row uses the same zero-padding
-// width, which isn't guaranteed for codes written by the mobile app.
-async function nextTagNumber(): Promise<number> {
-  const { data, error } = await supabase.from('donor_vehicle').select('tag_code')
-  if (error) throw error
-
-  let max = 0
-  for (const row of data ?? []) {
-    const match = row.tag_code?.match(/^DV-(\d+)$/)
-    if (match) max = Math.max(max, Number(match[1]))
-  }
-  return max + 1
-}
-
-function buildTagCodes(startNumber: number, count: number): string[] {
-  return Array.from({ length: count }, (_, index) => `DV-${String(startNumber + index).padStart(4, '0')}`)
-}
-
 export function useCreateDonorVehicles() {
   const queryClient = useQueryClient()
   const { session } = useAuth()
@@ -69,12 +47,12 @@ export function useCreateDonorVehicles() {
         }))
       }
 
-      let tagCodes = buildTagCodes(await nextTagNumber(), input.quantity)
+      let tagCodes = buildDonorVehicleTagCodes(await nextDonorVehicleTagNumber(), input.quantity)
       let result = await supabase.from('donor_vehicle').insert(buildRows(tagCodes)).select(VEHICLE_APPLICATION_SELECT)
 
       // tag_code is unique — a concurrent create can collide with our computed range. Retry once.
       if (result.error?.code === '23505') {
-        tagCodes = buildTagCodes(await nextTagNumber(), input.quantity)
+        tagCodes = buildDonorVehicleTagCodes(await nextDonorVehicleTagNumber(), input.quantity)
         result = await supabase.from('donor_vehicle').insert(buildRows(tagCodes)).select(VEHICLE_APPLICATION_SELECT)
       }
 

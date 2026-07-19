@@ -1,8 +1,9 @@
 import { ArrowUpDown, Plus, Printer, Tags, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { AddCarWizard } from '../components/AddCarWizard'
 import { AddPartWizard } from '../components/AddPartWizard'
 import { CarCard } from '../components/CarCard'
-import { CarDetailModal } from '../components/CarDetailModal'
 import { ChunkedGrid } from '../components/ChunkedGrid'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { FloatingTabs, type InventoryTab } from '../components/FloatingTabs'
@@ -76,6 +77,7 @@ function interleave<T>(lists: T[][]): T[] {
 const FALLBACK_SEARCH_EXAMPLES = ['ABS Sensor', 'Front Bumper', 'Alternator']
 
 export function InventoryPage() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<InventoryTab>('parts')
   const [search, setSearch] = useState('')
   const [partSort, setPartSort] = useState<PartSort>('newest')
@@ -83,7 +85,6 @@ export function InventoryPage() {
   const debouncedSearch = useDebouncedValue(search)
 
   const [selectedPart, setSelectedPart] = useState<InventoryListItem | null>(null)
-  const [selectedCar, setSelectedCar] = useState<DonorVehicleListItem | null>(null)
   const [deletePartTarget, setDeletePartTarget] = useState<InventoryListItem | null>(null)
   const [deleteCarTarget, setDeleteCarTarget] = useState<DonorVehicleListItem | null>(null)
   const [partVehicleIds, setPartVehicleIds] = useState<string[]>([])
@@ -91,6 +92,7 @@ export function InventoryPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [carStatusFilter, setCarStatusFilter] = useState<string | null>(null)
   const [addPartOpen, setAddPartOpen] = useState(false)
+  const [addCarOpen, setAddCarOpen] = useState(false)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [printLabelsItems, setPrintLabelsItems] = useState<InventoryListItem[] | null>(null)
@@ -203,7 +205,6 @@ export function InventoryPage() {
     if (!deleteCarTarget) return
     await deleteDonorVehicle.mutateAsync({ id: deleteCarTarget.id, photos: deleteCarTarget.photos })
     setDeleteCarTarget(null)
-    setSelectedCar(null)
   }
 
   function toggleSelectionMode() {
@@ -320,7 +321,7 @@ export function InventoryPage() {
               renderItem={(vehicle) => (
                 <CarCard
                   vehicle={vehicle}
-                  onOpen={() => setSelectedCar(vehicle)}
+                  onOpen={() => navigate(`/cars/${vehicle.id}`)}
                   onDelete={() => setDeleteCarTarget(vehicle)}
                 />
               )}
@@ -353,14 +354,6 @@ export function InventoryPage() {
           onDelete={() => setDeletePartTarget(selectedPart)}
           onSaved={(updates) => setSelectedPart((prev) => (prev ? { ...prev, ...updates } : prev))}
           onPrintLabel={() => setPrintLabelsItems([selectedPart])}
-        />
-      )}
-
-      {selectedCar && (
-        <CarDetailModal
-          vehicle={selectedCar}
-          onClose={() => setSelectedCar(null)}
-          onDelete={() => setDeleteCarTarget(selectedCar)}
         />
       )}
 
@@ -407,6 +400,17 @@ export function InventoryPage() {
         </button>
       )}
 
+      {tab === 'cars' && (
+        <button
+          type="button"
+          className={styles.addPartFab}
+          onClick={() => setAddCarOpen(true)}
+          aria-label="Add car to fleet"
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
+      )}
+
       {tab === 'parts' && selectionMode && (
         <div className={styles.selectionBar}>
           <span className={styles.selectionCount}>{selectedIds.size} selected</span>
@@ -426,6 +430,7 @@ export function InventoryPage() {
       )}
 
       {addPartOpen && <AddPartWizard onClose={() => setAddPartOpen(false)} />}
+      {addCarOpen && <AddCarWizard onClose={() => setAddCarOpen(false)} />}
 
       {printLabelsItems && <PrintLabelsModal items={printLabelsItems} onClose={() => setPrintLabelsItems(null)} />}
     </div>
