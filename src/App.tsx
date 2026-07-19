@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router-dom'
+import { CarUploadStatusBar } from './components/CarUploadStatusBar'
 import { Navbar } from './components/Navbar'
 import { useAuth } from './hooks/useAuth'
+import { CarDetailPage } from './pages/CarDetailPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { ItemDetailPage } from './pages/ItemDetailPage'
 import { LoginPage } from './pages/LoginPage'
@@ -19,9 +21,11 @@ function App() {
         <Routes>
           <Route path="/" element={<InventoryPage />} />
           <Route path="/items/:sku" element={<ItemDetailPage />} />
+          <Route path="/cars/:id" element={<CarDetailPage />} />
           <Route path="/sales" element={<SalesPage />} />
         </Routes>
       </main>
+      <CarUploadStatusBar />
     </>
   )
 }

@@ -20,6 +20,10 @@
   --panel-text: #f4f5f6;
   --panel-text-muted: #9aa0a8;
   --accent-on-panel: #2dd4c9;
+  /* Panel chrome is fixed-dark regardless of OS theme, but --danger follows the theme —
+     in light mode it's only 3.35:1 on panel-bg (fails 4.5:1 for small text). Fixed like
+     --accent-on-panel so panel-mounted error text stays readable in either OS theme. */
+  --danger-on-panel: #f87171;
 
   --danger: #dc2626;
   --danger-bg: rgba(220, 38, 38, 0.1);

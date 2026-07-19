@@ -55,9 +55,20 @@ async function compressPhoto(file: File): Promise<File> {
   }
 }
 
-export async function uploadPhotos(bucket: PhotoBucket, files: File[]): Promise<string[]> {
+// Like uploadPhotos, but reports progress as each file finishes and — since Promise.all
+// gives no partial results on rejection — tracks which paths actually landed in storage so
+// a caller with a longer-lived rollback contract (e.g. a background upload job) can clean
+// up orphaned files immediately rather than leaking them on a partial failure.
+export async function uploadPhotosTracked(
+  bucket: PhotoBucket,
+  files: File[],
+  onProgress: (uploadedCount: number) => void,
+): Promise<string[]> {
   const batchId = crypto.randomUUID()
-  return Promise.all(
+  const uploaded: string[] = []
+  let completed = 0
+
+  const settled = await Promise.allSettled(
     files.map(async (file, index) => {
       const compressed = await compressPhoto(file)
       if (compressed.size > MAX_UPLOAD_BYTES) {
@@ -68,9 +79,25 @@ export async function uploadPhotos(bucket: PhotoBucket, files: File[]): Promise<
       const path = `${batchId}/${index}.${extension}`
       const { error } = await supabase.storage.from(bucket).upload(path, compressed, { contentType: compressed.type })
       if (error) throw error
-      return path
+      uploaded.push(path)
+      completed += 1
+      onProgress(completed)
     }),
   )
+
+  const rejected = settled.find((entry): entry is PromiseRejectedResult => entry.status === 'rejected')
+  if (rejected) {
+    if (uploaded.length > 0) {
+      await supabase.storage.from(bucket).remove(uploaded).catch(() => {})
+    }
+    throw rejected.reason instanceof Error ? rejected.reason : new Error('Photo upload failed.')
+  }
+
+  return uploaded
+}
+
+export async function uploadPhotos(bucket: PhotoBucket, files: File[]): Promise<string[]> {
+  return uploadPhotosTracked(bucket, files, () => {})
 }
 
 export async function getSignedPhotoUrl(bucket: PhotoBucket, path: string): Promise<string | null> {
