@@ -27,9 +27,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 14px;
+}
+
+.iconWrap[data-danger='true'] {
   color: var(--danger);
   background: var(--danger-bg);
-  margin-bottom: 14px;
+}
+
+.iconWrap[data-danger='false'] {
+  color: var(--warning);
+  background: var(--warning-bg);
 }
 
 .title {
@@ -76,8 +84,15 @@
 }
 
 .confirm {
-  background: var(--danger);
   color: #fff;
+}
+
+.confirm[data-danger='true'] {
+  background: var(--danger);
+}
+
+.confirm[data-danger='false'] {
+  background: var(--accent);
 }
 
 .confirm:disabled,

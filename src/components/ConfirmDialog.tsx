@@ -5,6 +5,7 @@ interface ConfirmDialogProps {
   title: string
   description: string
   confirmLabel?: string
+  busyLabel?: string
   danger?: boolean
   busy?: boolean
   errorMessage?: string | null
@@ -16,6 +17,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
+  busyLabel = 'Deleting…',
   danger = true,
   busy = false,
   errorMessage,
@@ -36,8 +38,8 @@ export function ConfirmDialog({
             Cancel
           </button>
           {!errorMessage && (
-            <button type="button" className={styles.confirm} onClick={onConfirm} disabled={busy}>
-              {busy ? 'Deleting…' : confirmLabel}
+            <button type="button" className={styles.confirm} data-danger={danger} onClick={onConfirm} disabled={busy}>
+              {busy ? busyLabel : confirmLabel}
             </button>
           )}
         </div>

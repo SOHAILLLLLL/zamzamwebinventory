@@ -6,6 +6,7 @@ import { CarDetailPage } from './pages/CarDetailPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { ItemDetailPage } from './pages/ItemDetailPage'
 import { LoginPage } from './pages/LoginPage'
+import { ReplacementsPage } from './pages/ReplacementsPage'
 import { SalesPage } from './pages/SalesPage'
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/items/:sku" element={<ItemDetailPage />} />
           <Route path="/cars/:id" element={<CarDetailPage />} />
           <Route path="/sales" element={<SalesPage />} />
+          <Route path="/replacements" element={<ReplacementsPage />} />
         </Routes>
       </main>
       <CarUploadStatusBar />

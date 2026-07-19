@@ -1,4 +1,4 @@
-import { LogOut, Menu, PackageSearch, Receipt, X } from 'lucide-react'
+import { LogOut, Menu, PackageSearch, Receipt, RefreshCw, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -7,6 +7,7 @@ import styles from './Navbar.module.css'
 const links = [
   { to: '/', label: 'Inventory', icon: PackageSearch, end: true },
   { to: '/sales', label: 'Sales', icon: Receipt, end: false },
+  { to: '/replacements', label: 'Replacements', icon: RefreshCw, end: false },
 ]
 
 export function Navbar() {
