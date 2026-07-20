@@ -12,7 +12,7 @@ interface PrintLabelsModalProps {
   onClose: () => void
 }
 
-const LABELS_PER_SHEET = 40
+const LABELS_PER_SHEET = 24
 
 export function PrintLabelsModal({ items, onClose }: PrintLabelsModalProps) {
   const [offsetX, setOffsetX] = useState('0')
@@ -49,8 +49,8 @@ export function PrintLabelsModal({ items, onClose }: PrintLabelsModalProps) {
   return (
     <Modal title="Print labels" onClose={onClose}>
       <p className={styles.summary}>
-        {items.length} label{items.length === 1 ? '' : 's'} · {sheetCount} A4 sheet{sheetCount === 1 ? '' : 's'} (4 × 10,
-        52.5 × 29.7mm each)
+        {items.length} label{items.length === 1 ? '' : 's'} · {sheetCount} A4 sheet{sheetCount === 1 ? '' : 's'} (3 × 8,
+        70 × 37.1mm each)
       </p>
 
       {missingLocation > 0 && (
