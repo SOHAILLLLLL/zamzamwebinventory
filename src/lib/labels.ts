@@ -18,12 +18,12 @@ export interface LabelSheetOptions {
   offsetYMm?: number
 }
 
-// Matches the "A4 - 40" sticker sheet: 4 columns x 10 rows of 52.5 x 29.7mm labels,
-// filling the full 210 x 297mm A4 page with no gutter (4 x 52.5 = 210, 10 x 29.7 = 297).
-const COLUMNS = 4
-const ROWS = 10
-const LABEL_WIDTH_MM = 52.5
-const LABEL_HEIGHT_MM = 29.7
+// Matches the current sticker sheet: 3 columns x 8 rows of 70 x 37.125mm labels,
+// filling the full 210 x 297mm A4 page with no gutter (3 x 70 = 210, 8 x 37.125 = 297).
+const COLUMNS = 3
+const ROWS = 8
+const LABEL_WIDTH_MM = 70
+const LABEL_HEIGHT_MM = 37.125
 const LABELS_PER_PAGE = COLUMNS * ROWS
 
 const CELL_PADDING_MM = 2.5
