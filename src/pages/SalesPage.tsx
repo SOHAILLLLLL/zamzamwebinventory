@@ -16,7 +16,7 @@ import { useSales } from '../hooks/useSales'
 import type { SaleListItem } from '../types/db'
 import styles from './SalesPage.module.css'
 
-type SaleSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc'
+type SaleSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc' | 'pickup_first' | 'parcel_first'
 type DateFilter = 'today' | 'week' | 'month'
 
 const sortOptions: { value: SaleSort; label: string }[] = [
@@ -24,6 +24,8 @@ const sortOptions: { value: SaleSort; label: string }[] = [
   { value: 'oldest', label: 'Oldest first' },
   { value: 'amount_desc', label: 'Amount: high to low' },
   { value: 'amount_asc', label: 'Amount: low to high' },
+  { value: 'pickup_first', label: 'Type: pickup first' },
+  { value: 'parcel_first', label: 'Type: parcel first' },
 ]
 
 function matchesSaleSearch(sale: SaleListItem, query: string) {
@@ -101,9 +103,19 @@ export function SalesPage() {
       sorted.sort((a, b) => b.total_amount - a.total_amount)
     } else if (sort === 'amount_asc') {
       sorted.sort((a, b) => a.total_amount - b.total_amount)
+    } else if (sort === 'pickup_first') {
+      sorted.sort((a, b) => Number(b.is_carrying) - Number(a.is_carrying) || b.sale_date.localeCompare(a.sale_date))
+    } else if (sort === 'parcel_first') {
+      sorted.sort((a, b) => Number(a.is_carrying) - Number(b.is_carrying) || b.sale_date.localeCompare(a.sale_date))
     }
     return sorted
   }, [salesQuery.data, debouncedSearch, paidFilter, dateFilter, sort])
+
+  const stats = useMemo(() => {
+    const items = salesQuery.data ?? []
+    const parcels = items.filter((sale) => !sale.is_carrying).length
+    return { total: items.length, pickup: items.length - parcels, parcels }
+  }, [salesQuery.data])
 
   async function confirmDeleteSale() {
     if (!deleteSaleTarget) return
@@ -154,6 +166,23 @@ export function SalesPage() {
           Report
         </button>
       </div>
+
+      {salesQuery.isSuccess && (
+        <div className={styles.statsRow}>
+          <div className={styles.statTile}>
+            <span className={styles.statValue}>{stats.total}</span>
+            <span className={styles.statLabel}>Total sales</span>
+          </div>
+          <div className={styles.statTile}>
+            <span className={styles.statValue}>{stats.pickup}</span>
+            <span className={styles.statLabel}>Pickup</span>
+          </div>
+          <div className={styles.statTile}>
+            <span className={styles.statValue}>{stats.parcels}</span>
+            <span className={styles.statLabel}>Parcels</span>
+          </div>
+        </div>
+      )}
 
       <div className={styles.filterRow}>
         <StatusFilterChips
