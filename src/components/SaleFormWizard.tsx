@@ -10,7 +10,7 @@ import type { CustomerSummary, InventoryListItem, SaleListItem } from '../types/
 import wizardStyles from './AddPartWizard.module.css'
 import styles from './SaleFormWizard.module.css'
 
-type Step = 'customer' | 'items' | 'details' | 'review' | 'success'
+type Step = 'type' | 'customer' | 'items' | 'details' | 'review' | 'success'
 type PickStep = Exclude<Step, 'success'>
 
 interface DraftLine {
@@ -30,8 +30,9 @@ interface SaleFormWizardProps {
   onClose: () => void
 }
 
-const STEP_ORDER: PickStep[] = ['customer', 'items', 'details', 'review']
+const STEP_ORDER: PickStep[] = ['type', 'customer', 'items', 'details', 'review']
 const STEP_LABEL: Record<PickStep, string> = {
+  type: 'Pickup or parcel?',
   customer: 'Choose the customer',
   items: 'Add items',
   details: 'Sale details',
@@ -67,7 +68,7 @@ function customerTitle(customer: CustomerSummary | null): string {
 export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
   const isEditMode = !!sale
   const [mounted, setMounted] = useState(false)
-  const [step, setStep] = useState<Step>(isEditMode ? 'review' : 'customer')
+  const [step, setStep] = useState<Step>(isEditMode ? 'review' : 'type')
 
   const [customerMode, setCustomerMode] = useState<'walkin' | 'existing' | 'new'>(sale?.customer ? 'existing' : 'walkin')
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(sale?.customer ?? null)
@@ -153,6 +154,11 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
   }, [availableInventory, itemQuery])
 
   const totalAmount = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)
+
+  function handleSelectType(pickup: boolean) {
+    setIsCarrying(pickup)
+    setStep('customer')
+  }
 
   function handleSelectCustomer(customer: CustomerSummary) {
     setSelectedCustomer(customer)
@@ -337,6 +343,29 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
         )}
 
         <div className={wizardStyles.body}>
+          {step === 'type' && (
+            <div className={wizardStyles.stepPad}>
+              <div className={styles.typeOptions}>
+                <button
+                  type="button"
+                  className={`${styles.typeOption} ${isCarrying ? styles.typeOptionActive : ''}`}
+                  onClick={() => handleSelectType(true)}
+                >
+                  <Package size={22} />
+                  <span>Customer pickup</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.typeOption} ${!isCarrying ? styles.typeOptionActive : ''}`}
+                  onClick={() => handleSelectType(false)}
+                >
+                  <Truck size={22} />
+                  <span>Parcel / transport</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {step === 'customer' && (
             <>
               <div className={wizardStyles.searchWrap}>
@@ -583,13 +612,6 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
                 <input type="checkbox" checked={isPaid} onChange={(event) => setIsPaid(event.target.checked)} />
               </label>
 
-              <label className={styles.toggleRow}>
-                <span>
-                  {isCarrying ? <Package size={14} /> : <Truck size={14} />} {isCarrying ? 'Customer pickup' : 'Parcel / transport'}
-                </span>
-                <input type="checkbox" checked={isCarrying} onChange={(event) => setIsCarrying(event.target.checked)} />
-              </label>
-
               {!isCarrying && (
                 <>
                   <label className={wizardStyles.field}>
@@ -614,6 +636,13 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
             <div className={wizardStyles.stepPad}>
               <div className={wizardStyles.reviewCard}>
                 <div className={wizardStyles.reviewRow}>
+                  <span className={wizardStyles.reviewLabel}>Type</span>
+                  <span className={wizardStyles.reviewValue}>{isCarrying ? 'Pickup' : 'Parcel'}</span>
+                  <button type="button" className={wizardStyles.reviewEdit} onClick={() => setStep('type')}>
+                    Change
+                  </button>
+                </div>
+                <div className={wizardStyles.reviewRow}>
                   <span className={wizardStyles.reviewLabel}>Customer</span>
                   <span className={wizardStyles.reviewValue}>{customerTitle(selectedCustomer)}</span>
                   <button type="button" className={wizardStyles.reviewEdit} onClick={() => setStep('customer')}>
@@ -632,8 +661,7 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
                 <div className={wizardStyles.reviewRow}>
                   <span className={wizardStyles.reviewLabel}>Details</span>
                   <span className={wizardStyles.reviewValue}>
-                    {new Date(saleDate).toLocaleDateString('en-IN')} · {isPaid ? 'Paid' : 'Unpaid'} ·{' '}
-                    {isCarrying ? 'Pickup' : 'Parcel'}
+                    {new Date(saleDate).toLocaleDateString('en-IN')} · {isPaid ? 'Paid' : 'Unpaid'}
                   </span>
                   <button type="button" className={wizardStyles.reviewEdit} onClick={() => setStep('details')}>
                     Change
@@ -674,7 +702,7 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
 
         {step !== 'success' && (
           <div className={wizardStyles.footer}>
-            {step !== 'customer' ? (
+            {step !== 'type' ? (
               <button type="button" className={wizardStyles.backButton} onClick={handleBack} disabled={saving}>
                 <ArrowLeft size={15} />
                 Back
@@ -687,7 +715,7 @@ export function SaleFormWizard({ sale, onClose }: SaleFormWizardProps) {
                 {saving ? 'Saving…' : isEditMode ? 'Save changes' : 'Record sale'}
               </button>
             ) : (
-              step !== 'customer' && (
+              step !== 'customer' && step !== 'type' && (
                 <button
                   type="button"
                   className={wizardStyles.primaryButton}
