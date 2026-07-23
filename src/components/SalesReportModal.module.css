@@ -6,12 +6,13 @@
 
 .dateRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 16px;
 }
 
 .dateField {
-  flex: 1;
+  flex: 1 1 140px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -38,6 +39,7 @@
 
 .quickRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
 }
