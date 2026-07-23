@@ -8,9 +8,38 @@
 
 .controls {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   width: 100%;
   margin-bottom: 12px;
+}
+
+.searchRow {
+  display: flex;
+  width: 100%;
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .controls {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .searchRow {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .actionsRow {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
 }
 
 .filterRow {

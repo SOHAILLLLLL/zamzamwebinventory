@@ -112,10 +112,9 @@ export function SalesPage() {
   }, [salesQuery.data, debouncedSearch, paidFilter, dateFilter, sort])
 
   const stats = useMemo(() => {
-    const items = salesQuery.data ?? []
-    const parcels = items.filter((sale) => !sale.is_carrying).length
-    return { total: items.length, pickup: items.length - parcels, parcels }
-  }, [salesQuery.data])
+    const parcels = filteredSortedSales.filter((sale) => !sale.is_carrying).length
+    return { total: filteredSortedSales.length, pickup: filteredSortedSales.length - parcels, parcels }
+  }, [filteredSortedSales])
 
   async function confirmDeleteSale() {
     if (!deleteSaleTarget) return
@@ -151,20 +150,24 @@ export function SalesPage() {
   return (
     <div className={styles.page}>
       <div className={styles.controls}>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search customer, mobile, item, LR number…" />
-        <SortMenu value={sort} onChange={setSort} options={sortOptions} />
-        <button
-          type="button"
-          className={`${styles.sortButton} ${selectionMode ? styles.sortButtonActive : ''}`}
-          onClick={toggleSelectionMode}
-        >
-          {selectionMode ? <X size={15} /> : <Tags size={15} />}
-          {selectionMode ? 'Cancel' : 'Select'}
-        </button>
-        <button type="button" className={styles.sortButton} onClick={() => setReportOpen(true)}>
-          <FileDown size={15} />
-          Report
-        </button>
+        <div className={styles.searchRow}>
+          <SearchBar value={search} onChange={setSearch} placeholder="Search customer, mobile, item, LR number…" />
+        </div>
+        <div className={styles.actionsRow}>
+          <SortMenu value={sort} onChange={setSort} options={sortOptions} />
+          <button
+            type="button"
+            className={`${styles.sortButton} ${selectionMode ? styles.sortButtonActive : ''}`}
+            onClick={toggleSelectionMode}
+          >
+            {selectionMode ? <X size={15} /> : <Tags size={15} />}
+            {selectionMode ? 'Cancel' : 'Select'}
+          </button>
+          <button type="button" className={styles.sortButton} onClick={() => setReportOpen(true)}>
+            <FileDown size={15} />
+            Report
+          </button>
+        </div>
       </div>
 
       {salesQuery.isSuccess && (
