@@ -1,4 +1,4 @@
-import { MoreVertical, Package, Printer, Trash2, Truck } from 'lucide-react'
+import { MoreVertical, Package, PackageCheck, Printer, Trash2, Truck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { SaleListItem } from '../types/db'
 import { Badge } from './Badge'
@@ -13,11 +13,23 @@ interface SaleCardProps {
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  onTogglePacked?: (packed: boolean) => void
+  packedPending?: boolean
 }
 
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
 
-export function SaleCard({ sale, onOpen, onDelete, onPrintLabel, selectionMode, selected, onToggleSelect }: SaleCardProps) {
+export function SaleCard({
+  sale,
+  onOpen,
+  onDelete,
+  onPrintLabel,
+  selectionMode,
+  selected,
+  onToggleSelect,
+  onTogglePacked,
+  packedPending,
+}: SaleCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -37,6 +49,8 @@ export function SaleCard({ sale, onOpen, onDelete, onPrintLabel, selectionMode, 
   const dispatchLine = !sale.is_carrying
     ? [sale.transport_company, sale.lr_number && `LR ${sale.lr_number}`].filter(Boolean).join(' · ')
     : null
+  const transportLabel = sale.is_carrying ? 'Pickup' : sale.is_delivered ? 'Out for delivery' : 'Parcel'
+  const TransportIcon = sale.is_carrying ? Package : sale.is_delivered ? PackageCheck : Truck
 
   return (
     <article
@@ -58,8 +72,8 @@ export function SaleCard({ sale, onOpen, onDelete, onPrintLabel, selectionMode, 
           <div className={styles.badgeGroup}>
             <Badge tone={sale.is_paid ? 'success' : 'warning'}>{sale.is_paid ? 'Paid' : 'Unpaid'}</Badge>
             <span className={styles.transportTag}>
-              {sale.is_carrying ? <Package size={12} /> : <Truck size={12} />}
-              {sale.is_carrying ? 'Pickup' : 'Parcel'}
+              <TransportIcon size={12} />
+              {transportLabel}
             </span>
           </div>
 
@@ -112,7 +126,22 @@ export function SaleCard({ sale, onOpen, onDelete, onPrintLabel, selectionMode, 
         </div>
       </header>
 
-      {dispatchLine && <p className={styles.dispatchLine}>{dispatchLine}</p>}
+      {!sale.is_carrying && (
+        <div className={styles.dispatchRow}>
+          <p className={styles.dispatchLine}>{dispatchLine || 'No transport details yet'}</p>
+          {onTogglePacked && (
+            <label className={styles.packedToggle} onClick={(event) => event.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={sale.is_delivered}
+                disabled={packedPending}
+                onChange={(event) => onTogglePacked(event.target.checked)}
+              />
+              Packed
+            </label>
+          )}
+        </div>
+      )}
 
       <div className={styles.items}>
         {sale.sale_item.map((item) => (

@@ -7,16 +7,18 @@ import { SaleCard } from '../components/SaleCard'
 import { SaleDetailModal } from '../components/SaleDetailModal'
 import { SaleFormWizard } from '../components/SaleFormWizard'
 import { SalesReportModal } from '../components/SalesReportModal'
+import { SalesTypeTabs, type SalesTab } from '../components/SalesTypeTabs'
 import { SearchBar } from '../components/SearchBar'
 import { SortMenu } from '../components/SortMenu'
 import { StatusFilterChips } from '../components/StatusFilterChips'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useDeleteSale } from '../hooks/useDeleteSale'
 import { useSales } from '../hooks/useSales'
+import { useSetSaleDelivered } from '../hooks/useSetSaleDelivered'
 import type { SaleListItem } from '../types/db'
 import styles from './SalesPage.module.css'
 
-type SaleSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc' | 'pickup_first' | 'parcel_first'
+type SaleSort = 'newest' | 'oldest' | 'amount_desc' | 'amount_asc'
 type DateFilter = 'today' | 'week' | 'month'
 
 const sortOptions: { value: SaleSort; label: string }[] = [
@@ -24,9 +26,14 @@ const sortOptions: { value: SaleSort; label: string }[] = [
   { value: 'oldest', label: 'Oldest first' },
   { value: 'amount_desc', label: 'Amount: high to low' },
   { value: 'amount_asc', label: 'Amount: low to high' },
-  { value: 'pickup_first', label: 'Type: pickup first' },
-  { value: 'parcel_first', label: 'Type: parcel first' },
 ]
+
+function matchesSalesTab(sale: SaleListItem, tab: SalesTab): boolean {
+  if (tab === 'pickup') return sale.is_carrying
+  if (tab === 'parcel') return !sale.is_carrying && !sale.is_delivered
+  if (tab === 'out_for_delivery') return !sale.is_carrying && sale.is_delivered
+  return true
+}
 
 function matchesSaleSearch(sale: SaleListItem, query: string) {
   const haystack = [
@@ -70,6 +77,7 @@ export function SalesPage() {
   const [paidFilter, setPaidFilter] = useState<'paid' | 'unpaid' | null>(null)
   const [dateFilter, setDateFilter] = useState<DateFilter | null>(null)
   const [sort, setSort] = useState<SaleSort>('newest')
+  const [tab, setTab] = useState<SalesTab>('all')
 
   const [selectedSale, setSelectedSale] = useState<SaleListItem | null>(null)
   const [deleteSaleTarget, setDeleteSaleTarget] = useState<SaleListItem | null>(null)
@@ -82,8 +90,11 @@ export function SalesPage() {
 
   const salesQuery = useSales()
   const deleteSale = useDeleteSale()
+  const setSaleDelivered = useSetSaleDelivered()
 
-  const filteredSortedSales = useMemo(() => {
+  // Search + paid/unpaid + date filter, but not the type tab — this is the shared base both
+  // the tab counts and the tab-filtered list are built from, so counts stay in sync with search.
+  const searchAndFilterMatchedSales = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase()
     const items = salesQuery.data ?? []
     let filtered = query ? items.filter((sale) => matchesSaleSearch(sale, query)) : items
@@ -93,6 +104,22 @@ export function SalesPage() {
     if (dateFilter) {
       filtered = filtered.filter((sale) => matchesDateFilter(sale.sale_date, dateFilter))
     }
+    return filtered
+  }, [salesQuery.data, debouncedSearch, paidFilter, dateFilter])
+
+  const tabCounts = useMemo(() => {
+    const counts: Record<SalesTab, number> = { all: 0, pickup: 0, parcel: 0, out_for_delivery: 0 }
+    for (const sale of searchAndFilterMatchedSales) {
+      counts.all += 1
+      if (sale.is_carrying) counts.pickup += 1
+      else if (sale.is_delivered) counts.out_for_delivery += 1
+      else counts.parcel += 1
+    }
+    return counts
+  }, [searchAndFilterMatchedSales])
+
+  const filteredSortedSales = useMemo(() => {
+    const filtered = searchAndFilterMatchedSales.filter((sale) => matchesSalesTab(sale, tab))
 
     const sorted = [...filtered]
     if (sort === 'newest') {
@@ -103,18 +130,9 @@ export function SalesPage() {
       sorted.sort((a, b) => b.total_amount - a.total_amount)
     } else if (sort === 'amount_asc') {
       sorted.sort((a, b) => a.total_amount - b.total_amount)
-    } else if (sort === 'pickup_first') {
-      sorted.sort((a, b) => Number(b.is_carrying) - Number(a.is_carrying) || b.sale_date.localeCompare(a.sale_date))
-    } else if (sort === 'parcel_first') {
-      sorted.sort((a, b) => Number(a.is_carrying) - Number(b.is_carrying) || b.sale_date.localeCompare(a.sale_date))
     }
     return sorted
-  }, [salesQuery.data, debouncedSearch, paidFilter, dateFilter, sort])
-
-  const stats = useMemo(() => {
-    const parcels = filteredSortedSales.filter((sale) => !sale.is_carrying).length
-    return { total: filteredSortedSales.length, pickup: filteredSortedSales.length - parcels, parcels }
-  }, [filteredSortedSales])
+  }, [searchAndFilterMatchedSales, tab, sort])
 
   async function confirmDeleteSale() {
     if (!deleteSaleTarget) return
@@ -170,22 +188,7 @@ export function SalesPage() {
         </div>
       </div>
 
-      {salesQuery.isSuccess && (
-        <div className={styles.statsRow}>
-          <div className={styles.statTile}>
-            <span className={styles.statValue}>{stats.total}</span>
-            <span className={styles.statLabel}>Total sales</span>
-          </div>
-          <div className={styles.statTile}>
-            <span className={styles.statValue}>{stats.pickup}</span>
-            <span className={styles.statLabel}>Pickup</span>
-          </div>
-          <div className={styles.statTile}>
-            <span className={styles.statValue}>{stats.parcels}</span>
-            <span className={styles.statLabel}>Parcels</span>
-          </div>
-        </div>
-      )}
+      <SalesTypeTabs counts={tabCounts} active={tab} onChange={setTab} />
 
       <div className={styles.filterRow}>
         <StatusFilterChips
@@ -205,14 +208,18 @@ export function SalesPage() {
       {salesQuery.isSuccess && filteredSortedSales.length === 0 && (
         <div className={styles.empty}>
           <Receipt size={32} strokeWidth={1.5} className={styles.emptyIcon} />
-          <p>{debouncedSearch || paidFilter || dateFilter ? 'No sales match your search or filters.' : 'No sales yet.'}</p>
+          <p>
+            {debouncedSearch || paidFilter || dateFilter || tab !== 'all'
+              ? 'No sales match your search or filters.'
+              : 'No sales yet.'}
+          </p>
         </div>
       )}
       {salesQuery.isSuccess && filteredSortedSales.length > 0 && (
         <ChunkedGrid
           items={filteredSortedSales}
           keyFor={(sale) => sale.id}
-          resetKey={`${debouncedSearch}-${paidFilter}-${dateFilter}-${sort}`}
+          resetKey={`${debouncedSearch}-${paidFilter}-${dateFilter}-${sort}-${tab}`}
           emptyMessage="No sales match your search or filters."
           layout="list"
           renderItem={(sale) => (
@@ -224,6 +231,8 @@ export function SalesPage() {
               selectionMode={selectionMode}
               selected={selectedIds.has(sale.id)}
               onToggleSelect={() => toggleSaleSelected(sale.id)}
+              onTogglePacked={(packed) => setSaleDelivered.mutate({ id: sale.id, delivered: packed })}
+              packedPending={setSaleDelivered.isPending && setSaleDelivered.variables?.id === sale.id}
             />
           )}
         />
