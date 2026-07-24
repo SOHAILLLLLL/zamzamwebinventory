@@ -94,6 +94,85 @@ export function loadLogo() {
   return logoPromise
 }
 
+interface ContentBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+// The bounding box of every non-background pixel — "background" meaning near-white or
+// (for a PNG with alpha) near-transparent. Used to find how much of the source image is
+// actually the logo mark versus baked-in padding.
+function findContentBox(imageData: ImageData): ContentBox | null {
+  const { data, width, height } = imageData
+  let minX = width
+  let minY = height
+  let maxX = -1
+  let maxY = -1
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const isWhite = data[i] > 245 && data[i + 1] > 245 && data[i + 2] > 245
+      const isTransparent = data[i + 3] < 10
+      if (isWhite || isTransparent) continue
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+    }
+  }
+  if (maxX < minX || maxY < minY) return null
+  return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 }
+}
+
+// Crops an image down to its visible content (plus a small padding margin), dropping any
+// blank border baked into the source file. zamzam.png in particular has ~30% dead space
+// above the mark, so drawing it uncropped wastes a third of whatever box it's fit into —
+// this is what lets the logo actually read as "large" on a small, space-constrained label.
+async function cropToContent(image: LoadedImage, paddingRatio = 0.04): Promise<LoadedImage> {
+  const img = new Image()
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error('Could not load image for cropping'))
+    img.src = image.dataUrl
+  })
+
+  const canvas = document.createElement('canvas')
+  canvas.width = image.width
+  canvas.height = image.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return image
+  ctx.drawImage(img, 0, 0)
+
+  const box = findContentBox(ctx.getImageData(0, 0, image.width, image.height))
+  if (!box) return image
+
+  const padX = Math.round(box.width * paddingRatio)
+  const padY = Math.round(box.height * paddingRatio)
+  const cropX = Math.max(0, box.x - padX)
+  const cropY = Math.max(0, box.y - padY)
+  const cropWidth = Math.min(image.width, box.x + box.width + padX) - cropX
+  const cropHeight = Math.min(image.height, box.y + box.height + padY) - cropY
+
+  const cropCanvas = document.createElement('canvas')
+  cropCanvas.width = cropWidth
+  cropCanvas.height = cropHeight
+  const cropCtx = cropCanvas.getContext('2d')
+  if (!cropCtx) return image
+  cropCtx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight)
+
+  return { dataUrl: cropCanvas.toDataURL('image/png'), width: cropWidth, height: cropHeight }
+}
+
+let croppedLogoPromise: Promise<LoadedImage | null> | null = null
+/** The navbar logo, auto-cropped to its visible mark — for layouts (like item labels) where
+ * the logo needs to read large rather than sit inside its source file's blank margin. */
+export function loadCroppedLogo() {
+  croppedLogoPromise ??= loadLogo().then((logo) => (logo ? cropToContent(logo) : null))
+  return croppedLogoPromise
+}
+
 /** Large, low-opacity rotated wordmark behind the page content — printed and reused-photo protection. */
 export function drawWatermark(doc: jsPDF, width: number, height: number) {
   doc.saveGraphicsState()
